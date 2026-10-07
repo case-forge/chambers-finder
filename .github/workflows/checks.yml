@@ -1,0 +1,29 @@
+name: Checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - uses: peaceiris/actions-hugo@v3
+        with:
+          hugo-version: "0.165.0"
+          extended: true
+      - run: npm ci
+      # Builds the site the way a deploy does, then writes the offline service worker. Strict mode fails the
+      # job when a page or script names a file that is not in the build.
+      - run: hugo --gc
+      - run: OFFLINE_STRICT=1 node scripts/build-offline.mjs public --tools scripts/offline-tools.mjs
+      - run: npm test

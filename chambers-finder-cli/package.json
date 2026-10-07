@@ -1,0 +1,14 @@
+{
+  "name": "chambers-finder-cli",
+  "version": "1.0.0",
+  "description": "Finds the courts and the barristers' chambers nearest an England and Wales postcode, from Chambers Finder's own data, as JSON",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "chambers-finder": "cli.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "MPL-2.0"
+}

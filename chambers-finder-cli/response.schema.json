@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://caseforge.uk/schemas/chambers-finder-response-1.json",
+  "title": "Chambers Finder CLI answer to one request, schemaVersion 1",
+  "description": "The fields of a successful single answer under --json (a batch holds these, plus index and ok, in items). Fields may be added within a major version; none is removed or changes meaning.",
+  "type": "object",
+  "required": ["schemaVersion", "mode", "query", "location", "radiusMiles", "measureFrom", "chosenCourt", "courts", "chambers", "chambersWithinRadius", "chambersConsidered", "data"],
+  "properties": {
+    "ok": { "description": "true when the run succeeded.", "const": true },
+    "tool": { "description": "Always chambers-finder-cli.", "const": "chambers-finder-cli" },
+    "cliVersion": { "description": "The version of this tool.", "type": "string" },
+    "schemaVersion": { "description": "The version of this answer format (1).", "const": 1 },
+    "mode": { "description": "\"single\" for one request; \"batch\" for a batch, where items[] holds one answer or error per request.", "enum": ["single", "batch"] },
+    "query": { "description": "The request as it was read: the postcode and its outward code.", "type": "object", "required": ["postcode", "outcode"], "properties": { "postcode": { "type": "string" }, "outcode": { "type": "string" } } },
+    "location": { "type": "object", "required": ["outcode", "postcode", "label", "nation", "lat", "lon", "precision"], "description": "Where the postcode was placed: the centre of its postcode district, a few kilometres at most from any address in it.", "properties": { "outcode": { "type": "string" }, "postcode": { "type": ["string", "null"] }, "label": { "type": "string" }, "nation": { "enum": ["England", "Wales"] }, "lat": { "type": "number" }, "lon": { "type": "number" }, "precision": { "const": "postcode_district_centre" } } },
+    "radiusMiles": { "description": "The travel radius used, in miles; null when the request said \"all\".", "type": ["number", "null"] },
+    "measureFrom": { "description": "\"court\" or \"postcode\": where the chambers' distances start.", "enum": ["court", "postcode"] },
+    "chosenCourt": { "description": "The court the chambers are measured from: the nearest one, or the one named by courtId. Has rank, id, name, location, lat, lon, distanceMiles and source (nearest or court_id).", "type": "object", "required": ["rank", "id", "name", "lat", "lon", "distanceMiles", "source"], "properties": { "source": { "enum": ["nearest", "court_id"] } } },
+    "courts": { "description": "The nearest courts, nearest first: rank, id, name, location, lat, lon and distanceMiles.", "type": "array", "items": { "type": "object", "required": ["rank", "id", "name", "lat", "lon", "distanceMiles"] } },
+    "chambers": {
+      "type": "array",
+      "description": "The nearest chambers, nearest first: rank, id, name, website, email (the clerks), phone, distanceMiles, distanceFromPostcodeMiles, withinRadius, and the nearest branch (name, city, address, phone, lat, lon).",
+      "items": {
+        "type": "object",
+        "required": ["rank", "id", "name", "distanceMiles", "distanceFromPostcodeMiles", "withinRadius", "branch"],
+        "description": "distanceMiles is from the point measured from (the chosen court, or the postcode); the branch is the chambers' nearest branch to it.",
+        "properties": { "website": { "type": "string" }, "email": { "type": "string" }, "phone": { "type": "string" }, "branch": { "type": "object", "properties": { "name": { "type": "string" }, "city": { "type": "string" }, "address": { "type": "string" }, "phone": { "type": "string" }, "lat": { "type": "number" }, "lon": { "type": "number" } } } }
+      }
+    },
+    "chambersWithinRadius": { "type": "integer", "description": "How many chambers in all lie within the radius (not only the ones listed)." },
+    "chambersConsidered": { "description": "How many chambers were ranked in all.", "type": "integer" },
+    "data": { "description": "Which data the answer came from: the directory's schema version and updatedOn date, and when the postcode table was built.", "type": "object", "required": ["finderDataSchemaVersion", "finderDataUpdatedOn", "postcodeDataBuilt"] },
+    "warnings": { "description": "Notes that did not stop the answer.", "type": "array" }
+  }
+}

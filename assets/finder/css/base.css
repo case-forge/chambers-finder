@@ -1,0 +1,103 @@
+/* The design tokens live in shared/tokens.css (see that file's header), so
+ * every CaseForge tool draws from one set and a token changed there changes
+ * everywhere. */
+@import url("/css/shared/tokens.css");
+@import url("/css/shared/header.css");
+/* #cf-ascend, the return-to-top button (see that file's header). */
+@import url("/css/shared/back-to-top.css");
+/* The footer: .home-footer, .cf-footer-credit, .cf-footer-links and
+ * .caseforge-link, with no border-top line. */
+@import url("/css/shared/footer.css");
+/* Header actions and the apps menu: one shared copy, the same one every other
+ * page uses. */
+@import url("/css/shared/drawer.css");
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* Without this, the empty state (short, no scrollbar) and a populated
+   search results list (tall enough to scroll) reserve different widths for
+   the scrollbar, so .shell's centred column sits a few pixels further left
+   once there are results than it does before a search. The shared home.css
+   does the same. */
+html { scrollbar-gutter: stable; }
+
+input, select, textarea, button {
+  font-family: inherit;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: var(--fs-body);
+  line-height: 1.6;
+  min-height: 100vh;
+  /* Sticky footer, the same pattern as home.css's body: header, main and
+     footer are independent siblings, each picking its own 720px column
+     rather than sharing one padded wrapper (see the .cf-main comment below
+     for why). body itself is the flex column that pushes .home-footer
+     (margin-top: auto, in shared/footer.css) to the true bottom on short
+     pages. */
+  display: flex;
+  flex-direction: column;
+}
+
+a { color: var(--orange); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* Material Symbols are inline SVGs (partials/shared/icon.html, shared/icons.js), 1em square. */
+.ms {
+  flex: none;
+  vertical-align: -0.15em;
+}
+
+/* No wrapper around header, content and footer: one div with shared padding
+   would make the header narrower than 720px (720 minus the wrapper's 36px of
+   horizontal padding). Header, main and footer are independent siblings, as
+   on the site's other pages: each picks its own 720px column, so padding
+   meant for one cannot narrow another. */
+.cf-main {
+  max-width: 720px;
+  width: 100%;
+  margin: 0 auto;
+  /* No bottom reserve for the floating return-to-top button, as in
+     BundleTool: the button may sit near the footer at the very bottom of a
+     short page, and a small bottom padding keeps the footer in view. */
+  padding: 16px 18px 14px;
+}
+
+/* The header markup is the shared header partial (class names .home-header,
+   .home-mark and .home-mark-text). Size, layout and colours of the header
+   bar, the logo and wordmark and the theme switch are shared
+   (shared/header.css); this page keeps only its own column width and the few
+   differences below. */
+.home-header {
+  max-width: 720px;
+  width: 100%;
+  margin: 0 auto;
+}
+.home-mark { text-decoration: none; }
+.home-mark:hover { text-decoration: none; opacity: 0.8; }
+.home-mark-text {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* The footer is styled by shared/footer.css (.home-footer, .cf-footer-credit,
+   .cf-footer-links), imported above. */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Dark-mode contrast corrections. Each of these would sit under the 4.5:1
+   floor with the palette's own value; none is a design change beyond the
+   minimum needed to clear it. */
+:root .radius-btn.active { background: var(--orange-fill); border-color: var(--orange-fill); }
+[data-theme="light"] .radius-btn.active { background: var(--orange-fill); border-color: var(--orange-fill); }
+:root .kofi-btn { color: #f5822f; }
+[data-theme="light"] .kofi-btn { color: var(--orange); }

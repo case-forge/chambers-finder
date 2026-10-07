@@ -1,0 +1,21 @@
+{
+  "name": "chambers-finder",
+  "version": "1.0.0",
+  "description": "Barristers' chambers near any family court in England and Wales: a static web tool, its data files and a command line",
+  "private": true,
+  "license": "MPL-2.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "chambers-finder": "chambers-finder-cli/cli.mjs"
+  },
+  "scripts": {
+    "build": "hugo --gc && node scripts/build-offline.mjs public --tools scripts/offline-tools.mjs",
+    "serve": "hugo server",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "dependencies": {
+    "qrcode-generator": "2.0.4"
+  }
+}

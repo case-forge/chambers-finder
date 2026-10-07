@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, follow">
+  <title>Page not found - Chambers Finder</title>
+  <link rel="icon" type="image/svg+xml" href="{{ "img/caseforge-favicon-light.svg" | relURL }}">
+{{ $base := resources.Get "finder/css/base.css" | fingerprint }}
+  <link rel="stylesheet" href="{{ $base.RelPermalink }}">
+{{ partial "theme-head.html" . }}
+  <script src="{{ "js/shared/theme.js" | relURL }}" defer></script>
+</head>
+<body>
+{{ partial "site-header.html" . }}
+<main id="main-content" class="cf-main">
+  <section class="hero">
+    <h1>Page not found</h1>
+    <p class="hero-sub">There is nothing at this address. <a href="{{ "/" | relURL }}">Go to Chambers Finder</a>.</p>
+  </section>
+</main>
+{{ partial "site-footer.html" . }}
+</body>
+</html>

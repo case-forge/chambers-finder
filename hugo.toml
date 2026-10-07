@@ -1,0 +1,47 @@
+# Chambers Finder as a site of its own. Set baseURL to the address the site is served from, at the ROOT of
+# a host (https://finder.example/): the offline worker is /sw.js with scope /, so a site under a path
+# such as /chambers-finder/ needs scripts/offline-tools.mjs changed to match.
+baseURL = "https://chambers-finder.example/"
+locale = "en-GB"
+title = "Chambers Finder"
+
+disableKinds = ["taxonomy", "term", "RSS", "sitemap"]
+
+# Offline mode (README, "Offline"). Set enabled = false and deploy to switch it off everywhere: every
+# browser that had the service worker removes it and its caches on its next visit.
+[params.offline]
+  enabled = true
+
+# Declaring any [[module.mounts]] replaces Hugo's implicit defaults for the whole module, so the ones this
+# site uses are all listed. The last mount publishes the QR code library from the npm package at
+# /vendor/qrcode.js: run `npm ci` before `hugo`.
+[[module.mounts]]
+source = "content"
+target = "content"
+
+[[module.mounts]]
+source = "layouts"
+target = "layouts"
+
+[[module.mounts]]
+source = "static"
+target = "static"
+
+[[module.mounts]]
+source = "assets"
+target = "assets"
+
+[[module.mounts]]
+source = "data"
+target = "data"
+
+[[module.mounts]]
+source = "node_modules/qrcode-generator/dist"
+target = "static/vendor"
+includeFiles = ["qrcode.js"]
+
+# Only `hugo server` reads this: tell the browser never to keep a copy of any file while you work.
+[[server.headers]]
+  for = "/**"
+  [server.headers.values]
+    Cache-Control = "no-store"

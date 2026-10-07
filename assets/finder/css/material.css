@@ -1,0 +1,222 @@
+/* Chambers Finder: one material for every box, and no resting outlines on
+ * the controls (the same rule BundleTool follows).
+ *
+ * Every container takes the treatment of .toolbar-card: the card ground, the
+ * 16px radius and the soft shadow. Without it, the containers would mix
+ * --radius-sm and --radius and only some would have a shadow, which reads as
+ * several different component libraries on one page.
+ *
+ * A field announces itself by its ground and lights up only when it has
+ * focus.
+ *
+ * Loaded AFTER style.css so it wins on source order without !important. */
+
+/* ── One box treatment, everywhere ─────────────────────────────────────── */
+#prefs-bar,
+#contacted-bar,
+#load-error,
+.status-block,
+.search-results,
+.chamber-detail-wrap,
+.toolbar-card,
+/* .hero sits directly above .toolbar-card in the same column, so it takes
+   the same treatment as the home page's own hero: on a flat ground with no
+   shadow it would read as flush with the page while every card below it
+   looks lifted off it. */
+.hero {
+  border-radius: var(--radius);
+  /* No ring. A card is separated by its ground and its shadow, not by a
+     line drawn round it. */
+  border-color: transparent;
+  box-shadow: var(--shadow-sm);
+}
+.court-header, .chambers-list { border-color: transparent; }
+
+/* The court header and the chambers list are one object in two halves, so
+   they keep their shared seam and round only their outer corners. */
+.court-header {
+  border-radius: var(--radius) var(--radius) 0 0;
+  box-shadow: var(--shadow-sm);
+}
+.chambers-list {
+  border-radius: 0 0 var(--radius) var(--radius);
+  box-shadow: var(--shadow-sm);
+  /* A real line between the court and its first chambers.
+     style.css sets border-top: 1px solid var(--border) on .chambers-list,
+     but the border-color: transparent shorthand two rules up loads after it
+     and wins on all four sides, top included. It is restored here rather
+     than in style.css because material.css loads last. */
+  border-top-color: var(--border);
+}
+
+/* ── No resting outlines ───────────────────────────────────────────────── */
+/* The field sits one step off its card and draws no border until focus.
+   Transparent rather than removed: a zero-width border would resize the
+   control by 2px and break its alignment with the buttons beside it. */
+#search-input,
+.notes-area {
+  /* The page background itself, as on the home page: one fewer colour in
+     the palette than a card-relative tint. --bg resolves per theme
+     (charcoal in dark, cream in light), so this needs no light/dark split
+     of its own. */
+  background: var(--bg);
+  border-color: transparent;
+}
+#search-input:hover:not(:focus),
+.notes-area:hover:not(:focus) {
+  border-color: var(--border-mid);
+}
+#search-input:focus,
+.notes-area:focus {
+  border-color: var(--orange);
+  box-shadow: 0 0 0 3px var(--accent-focus);
+}
+
+/* Ghost controls: the frame goes, the accent arrives on hover. Same idea as
+   BundleTool's secondary buttons. */
+.btn-sm,
+.pref-toggle-btn,
+.radius-btn,
+.copy-contact-btn,
+.website-link {
+  border-color: transparent;
+  /* The page background, as for #search-input above. */
+  background: var(--bg);
+}
+.btn-sm:hover,
+.pref-toggle-btn:hover,
+.radius-btn:hover:not(.active),
+.copy-contact-btn:hover,
+.website-link:hover {
+  border-color: var(--orange);
+}
+/* The selected radius keeps its solid fill: one solid accent per view is
+   the rule this site follows. */
+.radius-btn.active { border-color: transparent; }
+
+/* No custom focus rings: the browser's default is correct in both themes
+   and under forced colours. Only the offset is set, so the ring clears the
+   control's own rounded edge instead of cutting through it. */
+.btn-sm:focus-visible,
+.pref-toggle-btn:focus-visible,
+.radius-btn:focus-visible,
+.copy-contact-btn:focus-visible,
+.website-link:focus-visible,
+.status-block:focus-visible,
+.drawer-btn:focus-visible,
+.drawer-app:focus-visible,
+.theme-btn:focus-visible {
+  outline-offset: 2px;
+}
+
+/* Cards lift 1px on hover, except under reduced motion, which a lift like
+   this must respect. */
+.status-block { transition: border-color .15s, background .15s, box-shadow .15s, transform .12s; }
+.status-block:hover { box-shadow: var(--shadow); transform: translateY(-1px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .status-block, .status-block:hover { transition: none; transform: none; }
+}
+
+/* Focus rings are the browser's. Chromium draws
+   black on a light ground and white on a dark one, follows the OS
+   high-contrast setting, and needs no maintenance. A hand-rolled accent ring
+   is a second thing to keep in step with the palette for no gain.
+
+   The one thing suppressed is the ring on a PROGRAMMATIC focus: #results
+   carries tabindex="-1" so the page can move focus there after a render for
+   screen readers, and a ring on a focus the user did not ask for reads as a
+   stray outline. Keyboard focus keeps its ring. */
+#results:focus:not(:focus-visible) { outline: none; }
+
+/* Light-theme boxes, one step darker. Card on beige with the palette's own
+   values has so little separation that the boxes read as one continuous
+   field; dark mode solves the opposite problem by lifting the controls off
+   the ground.
+
+   #f6f2ea against the #f0ebe1 ground is a real step without going grey, and
+   the field inside a card steps again so the two are still distinguishable
+   from each other. */
+[data-theme="light"] {
+  --card: #f8f5ef;
+  --surface: #fdfbf7;
+}
+[data-theme="light"] #prefs-bar,
+[data-theme="light"] #contacted-bar,
+[data-theme="light"] .status-block,
+[data-theme="light"] .toolbar-card,
+[data-theme="light"] .court-header,
+[data-theme="light"] .chambers-list,
+[data-theme="light"] .chamber-detail-wrap,
+[data-theme="light"] .chamber-detail-header {
+  background: #f6f2ea;
+}
+/* .search-results is not in the "one step darker" group above: it reads as
+   its own card matching .hero (var(--card), #f8f5ef), not the stepped
+   colour used for content nested inside a card, so the empty-state message
+   it can contain does not look like part of the search box. style.css's own
+   `.search-results { background: var(--card); }` applies. */
+
+/* Dark mode only: #prefs-bar, #contacted-bar and the results view
+   (.court-header, .chambers-list) match the var(--surface) of .toolbar-card
+   and .status-block, so the search bar and the six widgets share one
+   colour. var(--bg) would match the page background exactly and make these
+   boxes disappear into the page; --surface (#13161c) is a visibly distinct
+   step from --bg (#0e1014), as .toolbar-card uses, so the box-shadow stays
+   too. Light mode's #f6f2ea above is already close to its own --surface. */
+[data-theme="dark"] #prefs-bar,
+[data-theme="dark"] #contacted-bar,
+[data-theme="dark"] .court-header,
+[data-theme="dark"] .chambers-list,
+[data-theme="dark"] .chamber-detail-wrap,
+[data-theme="dark"] .chamber-detail-header {
+  background: var(--surface);
+}
+/* Light-mode fields and ghost controls take the page background, the same
+   as in dark mode. A fixed near-white such as #fffdfa would sit only 7 to 11
+   per channel from this section's --card (#f8f5ef) and read as identical to
+   it. */
+[data-theme="light"] #search-input,
+[data-theme="light"] .notes-area,
+[data-theme="light"] .btn-sm,
+[data-theme="light"] .pref-toggle-btn,
+[data-theme="light"] .radius-btn:not(.active),
+[data-theme="light"] .copy-contact-btn,
+[data-theme="light"] .website-link {
+  /* This higher-specificity light-mode rule must agree with the same rule
+     in the "No resting outlines" block above, or the two themes would
+     differ. The home page does the same. */
+  background: var(--bg);
+}
+
+/* The return-to-top button is the shared one (static/css/shared/back-to-top.css)
+   and looks the same on every page: white in light mode, #1c1f27 in dark, the
+   small shadow. This page redefines --card as cream in light mode, so the
+   button says white itself instead of inheriting that. */
+[data-theme="light"] #cf-ascend { background: #ffffff; }
+
+/* The header logo link wraps the mark and the wordmark, so its focus ring
+   hugs the final glyph. A little padding on the link gives the text room to
+   breathe and stops the ring cutting the "e" of CaseForge. The negative
+   margin keeps the mark optically in place, so the padding costs no layout
+   shift. */
+.home-mark {
+  padding: 4px 8px 4px 4px;
+  margin-left: -4px;
+  border-radius: var(--radius-sm);
+}
+
+/* The share picker's Copy is the one solid accent in that dialog, the rule
+   this site follows for the selected radius pill too. Everything else in
+   there is a ghost control. */
+.btn-sm.primary {
+  background: var(--orange-fill);
+  border-color: transparent;
+  color: #fff;
+  font-weight: 600;
+}
+.btn-sm.primary:hover {
+  background: color-mix(in srgb, #000 12%, var(--orange-fill));
+  border-color: transparent;
+  color: #fff;
+}
