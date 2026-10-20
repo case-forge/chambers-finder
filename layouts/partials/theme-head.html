@@ -1,0 +1,4 @@
+{{- /* Sets data-theme before first paint so there is no flash of the wrong theme; static/js/shared/theme.js then wires
+     the buttons. Put in <head>. A synchronous external script, not an inline one: the Content-Security-Policy in
+     static/_headers blocks inline script. */ -}}
+<script src="{{ "js/shared/theme-head.js" | relURL }}"></script>

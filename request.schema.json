@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://caseforge.uk/schemas/chambers-finder-request-1.json",
+  "title": "Chambers Finder CLI request, schemaVersion 1",
+  "description": "One request: a postcode in England or Wales, and how many courts and chambers to list. A JSON array of these (at most 500) is a batch. Keys not listed are rejected (error code unknown_key).",
+  "type": "object",
+  "required": ["postcode"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": 1, "description": "Optional. When present it must be 1." },
+    "_comment": { "type": "string", "maxLength": 2000 },
+    "postcode": { "type": "string", "maxLength": 20, "description": "A full postcode (M1 1AE, m11ae) or an outward code (LS1). Case and spacing do not matter. Outside England and Wales, or unknown, is refused with a stable error code." },
+    "courts": { "type": "integer", "minimum": 1, "maximum": 20, "default": 3, "description": "How many of the nearest courts to list." },
+    "chambers": { "type": "integer", "minimum": 1, "maximum": 50, "default": 5, "description": "How many of the nearest chambers to list." },
+    "radiusMiles": { "oneOf": [{ "type": "number", "minimum": 1, "maximum": 500 }, { "const": "all" }], "description": "The travel radius in miles, or \"all\" for none. Default: the data file's own default (35). Chambers beyond it are still listed, marked withinRadius false." },
+    "courtId": { "type": "string", "maxLength": 100, "description": "Measure the chambers from this court (an id in finder-data.json) instead of the court nearest the postcode." },
+    "measureFrom": { "enum": ["court", "postcode"], "default": "court", "description": "\"court\": the chambers nearest the chosen court. \"postcode\": the chambers nearest the postcode itself, as the page's postcode search shows them." }
+  }
+}

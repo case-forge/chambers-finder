@@ -1,0 +1,64 @@
+/* Shared footer chrome: every product imports this rather than keeping its
+ * own copy of the same rules. There is deliberately no border-top line: the
+ * footer is a block without a rule above it, on every product. Every page
+ * uses a 720px content column (home, Chambers Finder and BundleTool), so this
+ * width rule is genuinely shared.
+ */
+.home-footer {
+  max-width: 720px;
+  width: 100%;
+  margin: 0 auto;
+  /* Padding, not margin-bottom, for the space below the text: an external
+     margin creates dead space past the footer's own box, padding stays
+     inside it. */
+  padding: 24px 22px calc(24px + env(safe-area-inset-bottom, 0px));
+  text-align: center;
+  /* Sticky footer: the calling page's <body> needs to be a flex column
+     with min-height: 100vh for this to push the footer to the true bottom
+     on short pages, as every product's own base stylesheet makes it. */
+  margin-top: auto;
+}
+.home-footer > * {
+  max-width: 720px;
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+}
+.cf-footer-credit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: var(--fs-label);
+  color: var(--text-dim);
+  padding-bottom: 6px;
+}
+.cf-footer-credit img { width: 18px; height: 18px; opacity: 0.85; }
+[data-theme="dark"] .cf-footer-credit img { filter: invert(1); }
+.caseforge-link { color: var(--orange); font-weight: 600; }
+.caseforge-link:hover { text-decoration: underline; }
+.cf-footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  /* 16px, not 8px: these links have no middot separator between them,
+     so the gap alone has to carry the visual separation. */
+  gap: 16px;
+  font-size: var(--fs-label);
+  /* --text-dim, NOT --muted with an opacity on top: that would be 2.76:1 in
+     light and 2.43:1 in dark, against a 4.5 floor. */
+  color: var(--text-dim);
+}
+.cf-footer-links a { color: inherit; }
+.cf-footer-links a:hover { color: var(--orange); text-decoration: underline; }
+
+}
+
+/* Touch: the footer links are 16 to 23px tall. An invisible hit area brings them to 40px without moving
+   anything (padding grown, margin taken back). */
+@media (hover: none) {
+  .cf-footer-links a, .caseforge-link, .bt-footer-links a { position: relative; }
+  .cf-footer-links a::after, .caseforge-link::after, .bt-footer-links a::after { content: ""; position: absolute; inset: -10px -8px; }
+}

@@ -1,0 +1,222 @@
+{{/* The page: the whole of the site. */}}
+{{ define "jsonld" }}<script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "Chambers Finder",
+    "url": "{{ .Permalink }}",
+    "description": "Find barristers' chambers branches near any family court in England and Wales.",
+    "inLanguage": "en-GB",
+    "publisher": {
+      "@type": "Organization",
+      "name": "CaseForge",
+      "url": "https://caseforge.uk/",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "{{ "img/caseforge-mark.svg" | absURL }}"
+      }
+    }
+  }
+  </script>
+{{ end }}
+{{ define "title" }}Chambers Finder{{ end }}
+{{ define "description" }}Find barristers' chambers branches near any family court in England and Wales. Built for family law practitioners who primarily take legal aid.{{ end }}
+{{ define "ogtitle" }}Chambers Finder - CaseForge{{ end }}
+{{ define "ogtitle2" }}Chambers Finder - CaseForge{{ end }}
+{{ define "ogdescription" }}Find barristers' chambers branches near any family court in England and Wales. Built for family law practitioners who primarily take legal aid.{{ end }}
+{{ define "ogdescription2" }}Find barristers' chambers branches near any family court in England and Wales. Built for family law practitioners who primarily take legal aid.{{ end }}
+{{ define "stylesheets" }}
+{{ $style := resources.Get "finder/css/style.css" | fingerprint }}
+<link rel="stylesheet" href="{{ $style.RelPermalink }}">
+{{ $material := resources.Get "finder/css/material.css" | fingerprint }}
+<link rel="stylesheet" href="{{ $material.RelPermalink }}">
+{{ end }}
+{{ define "main" }}
+{{ partial "site-header.html" . }}
+<main id="main-content" class="cf-main">
+
+
+    <section class="hero">
+    <h1>Chambers Finder</h1>
+    <p class="hero-sub">Find barristers' chambers branches near any family court in England and Wales. Built for family law practitioners who primarily take legal aid.</p>
+    <a class="kofi-btn" href="https://ko-fi.com/case_forge" target="_blank" rel="noopener noreferrer">☕ Support this tool</a>
+  </section>
+
+    <div class="toolbar-card">
+    <div class="search-wrap">
+      <input
+        id="search-input"
+        type="search"
+        placeholder="Court, chambers or postcode…"
+        autocomplete="off"
+        spellcheck="false"
+        role="combobox"
+        aria-label="Search courts, chambers or a postcode"
+        aria-expanded="false"
+        aria-controls="search-results"
+        aria-autocomplete="list"
+      >
+      <button type="button" id="search-clear-btn" class="search-clear-btn" aria-label="Clear search">{{ partial "icon.html" (dict "name" "close" "class" "ms") }}</button>
+      <div id="search-results" class="search-results" role="listbox" aria-label="Search suggestions"></div>
+    </div>
+    <div class="toolbar-row">
+      <div class="radius-group" id="radius-group">
+        <span class="radius-label">Travel radius</span>
+              </div>
+    </div>
+  </div>
+
+    <div id="load-error"></div>
+
+    <div id="prefs-bar" class="hidden">
+    <span class="prefs-bar-info" id="prefs-bar-info"></span>
+    <div class="prefs-bar-actions">
+      <button type="button" class="btn-sm" id="save-link-btn">{{ partial "icon.html" (dict "name" "share" "class" "ms") }} Share</button>
+      <button type="button" class="btn-sm" id="undo-import-btn" hidden>{{ partial "icon.html" (dict "name" "history" "class" "ms") }} Undo link import</button>
+      <button type="button" class="btn-sm danger" id="clear-prefs-btn">{{ partial "icon.html" (dict "name" "refresh" "class" "ms") }} Reset all</button>
+    </div>
+  </div>
+
+    <div id="contacted-bar" class="hidden">
+    <span class="contacted-bar-info" id="contacted-bar-info"></span>
+    <div class="prefs-bar-actions">
+      <button type="button" class="btn-sm danger" id="reset-session-btn">{{ partial "icon.html" (dict "name" "delete" "class" "ms") }} Clear contacted</button>
+    </div>
+  </div>
+
+    <section id="status-strip">
+    <div class="status-block"><strong>0</strong><small>chambers sets</small></div>
+    <div class="status-block"><strong>0</strong><small>courts on file</small></div>
+    <div class="status-block noted-block"><strong>0</strong><small>noted</small></div>
+    <div class="status-block starred-block"><strong>0</strong><small>starred</small></div>
+    <div class="status-block contacted-block"><strong>0</strong><small>contacted</small></div>
+    <div class="status-block hidden-block"><strong>0</strong><small>hidden</small></div>
+  </section>
+
+    <section id="results" tabindex="-1" aria-label="Results">
+    <div class="results-placeholder">
+      <div class="big-icon">{{ partial "icon.html" (dict "name" "balance" "class" "ms") }}</div>
+      <p>Search for a court to see nearby chambers, or search for a chambers to see all its branches.</p>
+    </div>
+  </section>
+
+{{ partial "data-sources.html" . }}
+  </main>
+{{ partial "site-footer.html" . }}
+
+  {{- /* Share, as a picker rather than a single button. A link is the one
+       thing on this site that leaves the device, so what it carries (notes
+       above all) is chosen before it is made, not reported in a toast
+       afterwards. A <dialog> rather than a hand-rolled overlay: focus
+       trapping, Escape, inertness behind it and the backdrop are all native,
+       and none of them is worth reimplementing. */ -}}
+  <dialog id="share-modal" aria-labelledby="share-modal-title">
+    <form method="dialog" class="share-form">
+      <h2 id="share-modal-title">Share your saved work</h2>
+      <p class="share-intro">
+        The link carries what you tick, in the part of the address after the
+        <code>#</code>, which browsers never send to a server.
+      </p>
+
+      <div class="share-body">
+        <ul class="share-list">
+          <li>
+            <label>
+              <input type="checkbox" id="share-starred" checked>
+              <span class="share-label">Starred</span>
+              <span class="share-count" id="share-count-starred"></span>
+            </label>
+          </li>
+          <li>
+            <label>
+              <input type="checkbox" id="share-hidden" checked>
+              <span class="share-label">Hidden</span>
+              <span class="share-count" id="share-count-hidden"></span>
+            </label>
+          </li>
+          <li>
+            <label>
+              <input type="checkbox" id="share-seen" checked>
+              <span class="share-label">Seen</span>
+              <span class="share-count" id="share-count-seen"></span>
+            </label>
+          </li>
+          <li>
+            <label>
+              <input type="checkbox" id="share-contacted" checked>
+              <span class="share-label">Contacted</span>
+              <span class="share-count" id="share-count-contacted"></span>
+            </label>
+          </li>
+          <li>
+            <label>
+              <input type="checkbox" id="share-recents" checked>
+              <span class="share-label">Recent searches</span>
+              <span class="share-count" id="share-count-recents"></span>
+            </label>
+          </li>
+          {{- /* Notes are the exception and are off by default. They are the
+               only thing here that is your own writing about a chambers
+               rather than a marker, and a link is the only way they can
+               travel at all: never the QR code, which always leaves them out. */ -}}
+          <li class="share-notes">
+            <label>
+              <input type="checkbox" id="share-notes">
+              <span class="share-label">Notes (not in the QR code)</span>
+              <span class="share-count" id="share-count-notes"></span>
+            </label>
+          </li>
+        </ul>
+
+        {{- /* The QR code and the link update live as the ticks change:
+             generating one is a millisecond, pure-JS operation, so there is
+             no cost to redrawing it on every change, and a separate "Show QR"
+             button would only add a click. Notes are left out of the QR code
+             whatever the tick, as the label above says: the QR code is the
+             thing handed to someone else to scan, a higher bar than a link
+             only you click yourself. */ -}}
+        <div class="share-preview">
+          <div id="share-code-canvas"></div>
+          <p class="share-code-note" id="share-code-note" aria-live="polite"></p>
+          <label for="share-link" class="share-link-label">Link</label>
+          <input id="share-link" type="text" readonly class="share-link-input">
+        </div>
+      </div>
+
+      <div class="share-actions">
+        <button type="submit" class="btn-sm" value="cancel">Cancel</button>
+        <button type="button" class="btn-sm primary" id="share-copy">Copy link</button>
+      </div>
+    </form>
+  </dialog>
+
+  {{- /* Opening a share link asks before it writes anything: it can carry someone
+       else's stars and notes, and a link must never quietly replace your own. */ -}}
+  <dialog id="import-modal" aria-labelledby="import-modal-title" aria-describedby="import-summary">
+    <form method="dialog" class="share-form">
+      <h2 id="import-modal-title">Add what this link carries?</h2>
+      <p class="share-intro" id="import-summary"></p>
+      <p class="share-intro" id="import-explain">
+        <strong>Merge</strong> adds what the link has that you do not, and keeps everything of yours.
+        <strong>Replace</strong> swaps what you have saved for what is in the link, for each kind of thing the link carries (stars and notes, contacted, recent searches). Anything the link does not carry is left alone. You can undo either afterwards.
+      </p>
+      <div class="share-actions">
+        <button type="submit" class="btn-sm" value="cancel">Cancel</button>
+        <button type="submit" class="btn-sm danger" value="replace">Replace mine</button>
+        <button type="submit" class="btn-sm primary" value="merge" autofocus>Merge</button>
+      </div>
+    </form>
+  </dialog>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script src="{{ "js/shared/icons.js" | relURL }}" defer></script>
+{{ $postcodes := resources.Get "finder/data/postcode-districts.json" | fingerprint }}
+<link rel="preload" id="postcode-data" href="{{ $postcodes.RelPermalink }}" as="fetch" type="application/json" crossorigin>
+{{ $coreJs := resources.Get "finder/js/finder-core.js" | fingerprint }}
+<script src="{{ $coreJs.RelPermalink }}" defer></script>
+{{ $codesJs := resources.Get "finder/js/error-codes.js" | fingerprint }}
+<script src="{{ $codesJs.RelPermalink }}" defer></script>
+{{ $appJs := resources.Get "finder/js/app.js" | fingerprint }}
+<script src="{{ $appJs.RelPermalink }}" defer></script>
+{{ end }}

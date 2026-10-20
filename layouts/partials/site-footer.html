@@ -1,0 +1,16 @@
+{{- /* The footer of this site on its own. Contact and Privacy are the live site's pages (this repository has
+     no contact form), and one line points to the other CaseForge tools. */ -}}
+<footer class="home-footer">
+  <p class="cf-footer-credit">
+    <img src="{{ "img/caseforge-mark.svg" | relURL }}" alt="" aria-hidden="true" width="18" height="18">
+    <span>Built by <a class="caseforge-link" href="https://caseforge.uk/" target="_blank" rel="noopener noreferrer">CaseForge</a></span>
+  </p>
+  <p class="cf-footer-links">
+    <a href="https://caseforge.uk/contact/" target="_blank" rel="noopener noreferrer">Contact</a>
+    <a href="https://caseforge.uk/privacy/" target="_blank" rel="noopener noreferrer">Privacy</a>
+    <a href="#data-sources">Data sources</a>
+    <span>More tools at <a href="https://caseforge.uk/" target="_blank" rel="noopener noreferrer">caseforge.uk</a></span>
+  </p>
+</footer>
+{{ partial "back-to-top.html" . }}
+<script src="{{ "js/shared/back-to-top.js" | relURL }}" defer></script>

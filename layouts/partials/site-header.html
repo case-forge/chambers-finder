@@ -1,0 +1,22 @@
+{{- /* The header of this site on its own: the CaseForge mark (a link to the live site), and the colour theme
+     buttons static/js/shared/theme.js wires up. Nothing else: no app menu, no settings. */ -}}
+<a class="skip-link" href="#main-content">Skip to main content</a>
+<header class="home-header">
+  <a class="home-mark" href="https://caseforge.uk/" aria-label="CaseForge">
+    <img src="{{ "img/caseforge-mark.svg" | relURL }}" alt="" width="44" height="44">
+    <span class="home-mark-text">Case<span>Forge</span></span>
+  </a>
+  <div class="header-actions">
+    <div class="theme-toggle" id="theme-toggle" role="group" aria-label="Colour theme">
+      <button type="button" class="theme-btn" data-t="light" title="Light mode" aria-label="Light mode" aria-pressed="false">
+        {{ partial "icon.html" (dict "name" "light_mode" "size" 16) }}
+      </button>
+      <button type="button" class="theme-btn" data-t="auto" title="Follow device" aria-label="Follow device" aria-pressed="false">
+        {{ partial "icon.html" (dict "name" "desktop_windows" "size" 16) }}
+      </button>
+      <button type="button" class="theme-btn" data-t="dark" title="Dark mode" aria-label="Dark mode" aria-pressed="false">
+        {{ partial "icon.html" (dict "name" "dark_mode" "size" 16) }}
+      </button>
+    </div>
+  </div>
+</header>

@@ -1,0 +1,52 @@
+NOTICE
+======
+
+Chambers Finder (case-forge/chambers-finder), Copyright (c) 2026 CaseForge. Licensed under the Mozilla Public
+License 2.0 (LICENSE). The chambers directory data is licensed under CC BY 4.0 and the court list is based on
+public sector information under the Open Government Licence v3.0: see DATA-LICENCE.md. This file lists every third
+party component this repository ships, with its licence, and THIRD-PARTY-LICENSES/ holds the full text of each.
+
+Icons
+-----
+
+Interface icons are Material Symbols (Google, Apache-2.0): each one is a single
+path from @material-symbols/svg-400, inlined into the page as SVG
+(data/icons.json and static/js/shared/icons.js, generated from the package). Nothing
+is fetched at runtime.
+
+Postcode district table (Chambers Finder)
+-----------------------------------------
+
+assets/finder/data/postcode-districts.json holds every England and Wales postcode
+district with a centre point, label and nation, built by scripts/build-postcode-districts.mjs so that a typed
+postcode is located on the device with no lookup service.
+
+ONS Postcode Directory (August 2026): Office for National Statistics
+Licensed under the Open Government Licence v3.0.
+Source: Office for National Statistics licensed under the Open Government Licence v.3.0.
+Contains OS data (c) Crown copyright and database right 2026.
+Contains Royal Mail data (c) Royal Mail copyright and database right 2026.
+
+    England and Wales district centres are the mean of the live unit postcodes' coordinates.
+    Scotland, Northern Ireland, the Channel Islands and the Isle of Man are not located: only
+    the names of their postcode areas are kept, so that a typed postcode there is answered with
+    "Chambers Finder covers England and Wales only". The attribution above is shown on the
+    page itself, under Data sources.
+
+qrcode-generator@2.0.4
+---------------------
+
+Copyright (c) 2009 Kazuhiko Arase
+Licensed under the MIT license: http://www.opensource.org/licenses/mit-license.php
+
+An npm dependency (package.json). Hugo publishes node_modules/qrcode-generator/dist/qrcode.js unchanged at
+/vendor/qrcode.js, and the page loads it when someone makes a QR code for a share link.
+
+'QR Code' is a registered trademark of DENSO WAVE INCORPORATED.
+
+Chambers directory and court list
+---------------------------------
+
+static/finder-data.json: the chambers directory is licensed under CC BY 4.0 and the court list is based on
+public sector information licensed under the Open Government Licence v3.0. The terms and the credit to give are
+in DATA-LICENCE.md.
