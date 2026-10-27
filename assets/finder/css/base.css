@@ -45,7 +45,7 @@ body {
 a { color: var(--orange); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
-/* Material Symbols are inline SVGs (partials/shared/icon.html, shared/icons.js), 1em square. */
+/* Lucide icons are inline SVGs (partials/shared/icon.html, shared/icons.js), 1em square. */
 .ms {
   flex: none;
   vertical-align: -0.15em;

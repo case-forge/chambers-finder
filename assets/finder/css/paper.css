@@ -1,4 +1,4 @@
-/* Chambers Finder: one material for every box, and no resting outlines on
+/* Chambers Finder: one paper look for every box, and no resting outlines on
  * the controls (the same rule BundleTool follows).
  *
  * Every container takes the treatment of .toolbar-card: the card ground, the
@@ -25,10 +25,10 @@
    looks lifted off it. */
 .hero {
   border-radius: var(--radius);
-  /* No ring. A card is separated by its ground and its shadow, not by a
-     line drawn round it. */
+  /* No ring. A card is separated by its ground and its lift (the shared --box-lift, tokens.css), not by a line
+     drawn round it: the paper-cutout look. */
   border-color: transparent;
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--box-lift);
 }
 .court-header, .chambers-list { border-color: transparent; }
 
@@ -36,16 +36,16 @@
    they keep their shared seam and round only their outer corners. */
 .court-header {
   border-radius: var(--radius) var(--radius) 0 0;
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--box-lift);
 }
 .chambers-list {
   border-radius: 0 0 var(--radius) var(--radius);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--box-lift);
   /* A real line between the court and its first chambers.
      style.css sets border-top: 1px solid var(--border) on .chambers-list,
      but the border-color: transparent shorthand two rules up loads after it
      and wins on all four sides, top included. It is restored here rather
-     than in style.css because material.css loads last. */
+     than in style.css because paper.css loads last. */
   border-top-color: var(--border);
 }
 
@@ -143,13 +143,12 @@
 }
 [data-theme="light"] #prefs-bar,
 [data-theme="light"] #contacted-bar,
-[data-theme="light"] .status-block,
-[data-theme="light"] .toolbar-card,
 [data-theme="light"] .court-header,
 [data-theme="light"] .chambers-list,
 [data-theme="light"] .chamber-detail-wrap,
 [data-theme="light"] .chamber-detail-header {
-  background: #f6f2ea;
+  /* The panel tier of the shared two tiers (shared/tokens.css), as in dark below. */
+  background: var(--surface);
 }
 /* .search-results is not in the "one step darker" group above: it reads as
    its own card matching .hero (var(--card), #f8f5ef), not the stepped

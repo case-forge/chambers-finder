@@ -28,8 +28,8 @@
 {{ define "stylesheets" }}
 {{ $style := resources.Get "finder/css/style.css" | fingerprint }}
 <link rel="stylesheet" href="{{ $style.RelPermalink }}">
-{{ $material := resources.Get "finder/css/material.css" | fingerprint }}
-<link rel="stylesheet" href="{{ $material.RelPermalink }}">
+{{ $paper := resources.Get "finder/css/paper.css" | fingerprint }}
+<link rel="stylesheet" href="{{ $paper.RelPermalink }}">
 {{ end }}
 {{ define "main" }}
 {{ partial "site-header.html" . }}
@@ -39,7 +39,7 @@
     <section class="hero">
     <h1>Chambers Finder</h1>
     <p class="hero-sub">Find barristers' chambers branches near any family court in England and Wales. Built for family law practitioners who primarily take legal aid.</p>
-    <a class="kofi-btn" href="https://ko-fi.com/case_forge" target="_blank" rel="noopener noreferrer">☕ Support this tool</a>
+    <a class="kofi-btn" href="https://ko-fi.com/case_forge" target="_blank" rel="noopener noreferrer">{{ partial "icon.html" (dict "name" "coffee" "class" "ms") }} Support this tool</a>
   </section>
 
     <div class="toolbar-card">

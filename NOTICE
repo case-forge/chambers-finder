@@ -9,10 +9,10 @@ party component this repository ships, with its licence, and THIRD-PARTY-LICENSE
 Icons
 -----
 
-Interface icons are Material Symbols (Google, Apache-2.0): each one is a single
-path from @material-symbols/svg-400, inlined into the page as SVG
-(data/icons.json and static/js/shared/icons.js, generated from the package). Nothing
-is fetched at runtime.
+Interface icons are Lucide (Lucide Icons and Contributors, ISC; Copyright (c)
+2026 Lucide Icons and Contributors): each one is a set of SVG shapes from
+lucide-static, inlined into the page as SVG by icons/build-icons.mjs
+(data/icons.json and static/js/shared/icons.js). Nothing is fetched at runtime.
 
 Postcode district table (Chambers Finder)
 -----------------------------------------

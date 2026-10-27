@@ -33,7 +33,7 @@ function escapeHtml(str) {
     .replace(/'/g, "&#39;");
 }
 
-// Material Symbols as inline SVG (static/js/shared/icons.js, loaded ahead of this
+// Lucide icons as inline SVG (static/js/shared/icons.js, loaded ahead of this
 // script). "icon-fill" asks for the filled form, which only star has.
 function icon(name, extraClass = "") {
   return window.cfIcon(extraClass === "icon-fill" ? name + "-fill" : name, "ms");
@@ -1793,7 +1793,7 @@ function renderChamberDetail(ch, court) {
     <div class="chamber-detail-wrap" id="chamber-detail">
       <div class="chamber-detail-header">
         <h3>${icon("gavel")} ${escapeHtml(ch.name)}</h3>
-        <button class="chamber-back-btn" id="chamber-back-btn">← Back to ${escapeHtml(court ? court.name : "court")}</button>
+        <button class="chamber-back-btn" id="chamber-back-btn">${icon("arrow_back")} Back to ${escapeHtml(court ? court.name : "court")}</button>
       </div>
       ${_chamberPrefsHeaderHtml(ch.id, cp)}
       <div class="branches-list">${branchesHtml}</div>

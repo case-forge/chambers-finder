@@ -1,9 +1,7 @@
 .hero {
   position: relative;
   overflow: hidden;
-  /* The hero takes the darker of the pair, and .toolbar-card and
-     .status-block below it the lighter, as across the site. */
-  background: var(--card);
+  /* Ground and lift: the shared two tiers (shared/tokens.css). */
   border-radius: var(--radius);
   /* Kept small so that, on the empty landing state, this plus
      .results-placeholder's own padding leaves the footer inside a real
@@ -46,6 +44,8 @@
 
 .btn-sm .ms,
 .pref-toggle-btn .ms,
+.kofi-btn .ms,
+.chamber-back-btn .ms,
 .copy-contact-btn .ms,
 .website-link .ms {
   font-size: 16px;
@@ -59,7 +59,6 @@
 }
 
 .toolbar-card {
-  background: var(--surface);
   border: 1px solid var(--border-mid);
   border-radius: var(--radius);
   padding: 20px 22px;
@@ -298,7 +297,8 @@
 }
 
 .btn-sm:hover { color: var(--text); border-color: var(--orange); }
-.btn-sm.danger:hover { border-color: var(--red); color: var(--red); }
+.btn-sm.danger { color: var(--danger-ink); }
+.btn-sm.danger:hover { border-color: var(--danger-ink); color: var(--danger-ink); }
 
 #status-strip {
   display: grid;
@@ -308,7 +308,6 @@
 }
 
 .status-block {
-  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 16px 12px 14px;
@@ -415,7 +414,7 @@
   background: var(--card);
   border: 1px solid var(--border-mid);
   /* A real line between the court and its first chambers. .court-header
-     and .chambers-list can share one ground in dark mode (material.css), so
+     and .chambers-list can share one ground in dark mode (paper.css), so
      they need their own seam to read as two sections. */
   border-top: 1px solid var(--border);
   border-radius: 0 0 var(--radius) var(--radius);
@@ -595,6 +594,9 @@
 }
 
 .chamber-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   background: none;
   border: none;
   color: var(--text-dim);
@@ -911,7 +913,7 @@ body.drag-active { outline: 2px dashed var(--orange); outline-offset: -8px; }
 /* ── Share picker ──────────────────────────────────────────────────────────
    A native <dialog>, so the backdrop, Escape, focus trapping and inertness
    behind it come from the browser. Only the surface is styled here, on the
-   same tokens as the cards, and material like the rest: no resting outline
+   same tokens as the cards, and paper like the rest: no resting outline
    on the boxes, the ground doing the separating. */
 #share-modal,
 #import-modal {
@@ -953,6 +955,7 @@ body.drag-active { outline: 2px dashed var(--orange); outline-offset: -8px; }
   font-size: 0.95em;
   padding: 0 3px;
   border-radius: 3px;
+  color: var(--text);   /* muted on this 8% tint was 4.3:1 in dark */
   background: color-mix(in srgb, var(--text) 8%, var(--card));
 }
 
