@@ -60,7 +60,7 @@ Every request field with its option (also `chambers-finder --help request`):
 Under `--json` a successful single answer looks like this (with one court and one chambers row; the real answer lists as many as asked for):
 
 ```json
-{"ok":true,"tool":"chambers-finder-cli","cliVersion":"1.1.0","schemaVersion":1,"mode":"single",
+{"ok":true,"tool":"chambers-finder-cli","cliVersion":"1.2.0","schemaVersion":1,"mode":"single",
  "query":{"postcode":"M1 1AE","outcode":"M1"},
  "location":{"outcode":"M1","postcode":"M1 1AE","label":"Manchester","nation":"England","lat":53.478,"lon":-2.236,"precision":"postcode_district_centre"},
  "radiusMiles":35,"measureFrom":"court",

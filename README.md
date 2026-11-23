@@ -94,8 +94,15 @@ The tool opens and works with the network switched off after one visit. `scripts
 
 ## Changes since 1.0.0
 
-Version 1.1.0 collects everything changed since the first public snapshot.
+Version 1.2.0 collects everything changed since the first public snapshot.
 
+- **Map.** A map of the places in the list and where the search started, drawn from an outline of England and Wales that ships with the page: no tile server and no request to any other site. Pins are coloured by state (contacted, starred, hidden), courts are square, and places on one spot fan out when pressed.
+- **Courts.** Each court links to its page on GOV.UK Find a Court or Tribunal. A postcode search has Show more for courts and for chambers beyond the radius.
+- **Getting about.** A chambers or a court has a Back button and opens in a new tab on a middle click. Chambers and courts are listed A to Z from the front page.
+- **Saved things.** Reset all and Clear contacted ask in the page before they clear. Two offices of one chambers in the same city keep their own Called record.
+- **Postcodes.** A postcode that cannot be right is flagged as it is typed.
+- **Look.** The typeface is Inter Tight, self-hosted in weights 400 and 600, with the new palette: an even cool dark ladder, and warm shadows on light. Buttons are rounded rectangles; badges and pills stay ovals.
+- **Data.** Chambers and offices added and addresses corrected.
 - **Errors.** When a postcode lookup, a data file, a save link or a QR code fails, the message now says what the browser reported, with the error code.
 - **Command line.** The command line moved from `chambers-finder-cli/` to `scripts/`, and its two schemas to the repository root. Its arguments, exit codes and output are unchanged.
 - **Updates.** A new version applies itself when the page has only just opened or the tab is in the background; otherwise a Reload button is offered, and it works. The reload notice names the file that failed to load.
