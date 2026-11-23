@@ -1,6 +1,6 @@
 {
   "name": "chambers-finder-cli",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Barristers' chambers near any family court in England and Wales: a static web tool, its data files and a command line",
   "private": true,
   "license": "MPL-2.0",
