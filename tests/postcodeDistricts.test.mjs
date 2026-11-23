@@ -3,7 +3,7 @@
  * scripts/build-postcode-districts.mjs) against known unit postcodes: how far a district's
  * centre is from a real address in it, in miles. Chambers Finder covers England and Wales only,
  * so the truth is the ONS Postcode Directory for England and Wales
- * (fixtures/postcodes/known-postcodes.json), and the table holds no coordinates for Scotland,
+ * (chambers-finder/tests/fixtures/postcodes/known-postcodes.json), and the table holds no coordinates for Scotland,
  * Northern Ireland, Jersey, Guernsey or the Isle of Man, only their postcode areas by name.
  */
 import { test } from 'node:test';

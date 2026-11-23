@@ -20,11 +20,11 @@
   </script>
 {{ end }}
 {{ define "title" }}Chambers Finder{{ end }}
-{{ define "description" }}Find barristers' chambers branches near any family court in England and Wales. Built for family law practitioners who primarily take legal aid.{{ end }}
+{{ define "description" }}Find barristers' chambers branches near any family court in England and Wales. Built for family law practitioners.{{ end }}
 {{ define "ogtitle" }}Chambers Finder - CaseForge{{ end }}
 {{ define "ogtitle2" }}Chambers Finder - CaseForge{{ end }}
-{{ define "ogdescription" }}Find barristers' chambers branches near any family court in England and Wales. Built for family law practitioners who primarily take legal aid.{{ end }}
-{{ define "ogdescription2" }}Find barristers' chambers branches near any family court in England and Wales. Built for family law practitioners who primarily take legal aid.{{ end }}
+{{ define "ogdescription" }}Find barristers' chambers branches near any family court in England and Wales. Built for family law practitioners.{{ end }}
+{{ define "ogdescription2" }}Find barristers' chambers branches near any family court in England and Wales. Built for family law practitioners.{{ end }}
 {{ define "stylesheets" }}
 {{ $style := resources.Get "finder/css/style.css" | fingerprint }}
 <link rel="stylesheet" href="{{ $style.RelPermalink }}">
@@ -38,8 +38,7 @@
 
     <section class="hero">
     <h1>Chambers Finder</h1>
-    <p class="hero-sub">Find barristers' chambers branches near any family court in England and Wales. Built for family law practitioners who primarily take legal aid.</p>
-    <a class="kofi-btn" href="https://ko-fi.com/case_forge" target="_blank" rel="noopener noreferrer">{{ partial "icon.html" (dict "name" "coffee" "class" "ms") }} Support this tool</a>
+    <p class="hero-sub">Find barristers' chambers branches near any family court in England and Wales. Built for family law practitioners.</p>
   </section>
 
     <div class="toolbar-card">
@@ -63,40 +62,27 @@
       <div class="radius-group" id="radius-group">
         <span class="radius-label">Travel radius</span>
               </div>
+      <button type="button" class="btn-sm reset-btn hidden" id="restart-btn" title="Close everything and go back to the start. Nothing saved is deleted.">{{ partial "icon.html" (dict "name" "restart_alt" "class" "ms") }} Reset</button>
     </div>
   </div>
 
     <div id="load-error"></div>
 
-    <div id="prefs-bar" class="hidden">
-    <span class="prefs-bar-info" id="prefs-bar-info"></span>
-    <div class="prefs-bar-actions">
-      <button type="button" class="btn-sm" id="save-link-btn">{{ partial "icon.html" (dict "name" "share" "class" "ms") }} Share</button>
-      <button type="button" class="btn-sm" id="undo-import-btn" hidden>{{ partial "icon.html" (dict "name" "history" "class" "ms") }} Undo link import</button>
-      <button type="button" class="btn-sm danger" id="clear-prefs-btn">{{ partial "icon.html" (dict "name" "refresh" "class" "ms") }} Reset all</button>
-    </div>
-  </div>
 
-    <div id="contacted-bar" class="hidden">
-    <span class="contacted-bar-info" id="contacted-bar-info"></span>
-    <div class="prefs-bar-actions">
-      <button type="button" class="btn-sm danger" id="reset-session-btn">{{ partial "icon.html" (dict "name" "delete" "class" "ms") }} Clear contacted</button>
-    </div>
-  </div>
 
     <section id="status-strip">
-    <div class="status-block"><strong>0</strong><small>chambers sets</small></div>
-    <div class="status-block"><strong>0</strong><small>courts on file</small></div>
-    <div class="status-block noted-block"><strong>0</strong><small>noted</small></div>
-    <div class="status-block starred-block"><strong>0</strong><small>starred</small></div>
-    <div class="status-block contacted-block"><strong>0</strong><small>contacted</small></div>
-    <div class="status-block hidden-block"><strong>0</strong><small>hidden</small></div>
+    <div class="status-block"><strong>—</strong><small>chambers</small></div>
+    <div class="status-block"><strong>—</strong><small>courts</small></div>
+    <div class="status-block noted-block"><strong>—</strong><small>noted</small></div>
+    <div class="status-block starred-block"><strong>—</strong><small>starred</small></div>
+    <div class="status-block contacted-block"><strong>—</strong><small>contacted</small></div>
+    <div class="status-block hidden-block"><strong>—</strong><small>hidden</small></div>
   </section>
 
     <section id="results" tabindex="-1" aria-label="Results">
     <div class="results-placeholder">
       <div class="big-icon">{{ partial "icon.html" (dict "name" "balance" "class" "ms") }}</div>
-      <p>Search for a court to see nearby chambers, or search for a chambers to see all its branches.</p>
+      <p>Search for a court or postcode to see nearby chambers, or search for a chambers to see all its branches.</p>
     </div>
   </section>
 
@@ -162,7 +148,7 @@
           <li class="share-notes">
             <label>
               <input type="checkbox" id="share-notes">
-              <span class="share-label">Notes (not in the QR code)</span>
+              <span class="share-label">Notes (not in QR)</span>
               <span class="share-count" id="share-count-notes"></span>
             </label>
           </li>
@@ -190,15 +176,15 @@
     </form>
   </dialog>
 
-  {{- /* Opening a share link asks before it writes anything: it can carry someone
-       else's stars and notes, and a link must never quietly replace your own. */ -}}
+  {{- /* Opening a share link asks before it writes anything when this device has something saved: it can carry
+       someone else's stars and notes, and a link must never quietly replace your own. With nothing saved it goes
+       straight in (app.js _offerImport). */ -}}
   <dialog id="import-modal" aria-labelledby="import-modal-title" aria-describedby="import-summary">
     <form method="dialog" class="share-form">
       <h2 id="import-modal-title">Add what this link carries?</h2>
       <p class="share-intro" id="import-summary"></p>
       <p class="share-intro" id="import-explain">
-        <strong>Merge</strong> adds what the link has that you do not, and keeps everything of yours.
-        <strong>Replace</strong> swaps what you have saved for what is in the link, for each kind of thing the link carries (stars and notes, contacted, recent searches). Anything the link does not carry is left alone. You can undo either afterwards.
+        <strong>Merge</strong> keeps yours and adds the link's. <strong>Replace</strong> swaps yours for the link's.
       </p>
       <div class="share-actions">
         <button type="submit" class="btn-sm" value="cancel">Cancel</button>
@@ -213,6 +199,12 @@
 <script src="{{ "js/shared/icons.js" | relURL }}" defer></script>
 {{ $postcodes := resources.Get "finder/data/postcode-districts.json" | fingerprint }}
 <link rel="preload" id="postcode-data" href="{{ $postcodes.RelPermalink }}" as="fetch" type="application/json" crossorigin>
+{{ $outline := resources.Get "finder/data/england-wales.json" | fingerprint }}
+{{- /* A preload that no browser acts on (media "not all"): the offline build finds the file through it and keeps it for
+     offline use, while the page fetches it itself, only when the map is to be shown. */ -}}
+<link rel="preload" id="map-data" href="{{ $outline.RelPermalink }}" as="fetch" type="application/json" crossorigin media="not all">
+{{ $mapJs := resources.Get "finder/js/finder-map.js" | fingerprint }}
+<script src="{{ $mapJs.RelPermalink }}" defer></script>
 {{ $coreJs := resources.Get "finder/js/finder-core.js" | fingerprint }}
 <script src="{{ $coreJs.RelPermalink }}" defer></script>
 {{ $codesJs := resources.Get "finder/js/error-codes.js" | fingerprint }}

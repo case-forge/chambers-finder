@@ -7,6 +7,11 @@ const ACTIVITY_KEY  = "cf9_activity";
 let RADII        = [20, 35, 50];
 let RADIUS_LABELS = ["20 mi", "35 mi", "50 mi"];
 const MAX_SEARCH_RESULTS_PER_GROUP = 8;
+const FAR_FIRST = 10;   // chambers (or courts) shown beyond the travel radius to begin with
+const FAR_STEP  = 10;   // and how many more each "Show more" adds
+const farShown = new Map();   // how many are showing beyond the radius, per court and list; cleared on a fresh start
+const _farCount = (court, kind) => farShown.get(`${court.id}|${kind}`) || FAR_FIRST;
+const _farMore  = (court, kind) => farShown.set(`${court.id}|${kind}`, _farCount(court, kind) + FAR_STEP);
 const BALANCED_SEARCH_RESULTS_PER_GROUP = 6;
 const NOTES_MAX_LENGTH = 500;
 const RECENT_SEARCHES_KEY = "cf_recent";
@@ -53,6 +58,10 @@ const looksLikeOutcode  = Core.looksLikeOutcode;
 // about a postcode leaves the device, and the answer is instant: no request to wait for.
 const POSTCODE_TABLE_URL = document.getElementById("postcode-data")?.href || "postcode-districts.json";
 let _postcodeTable = null;
+const MAP_URL = document.getElementById("map-data")?.href || "england-wales.json";
+let _mapOutline = null;
+let _mapLoad = null;
+const MAP_HIDDEN_KEY = "cf_map_hidden";
 let _postcodeTableLoad = null;
 
 function loadPostcodeTable() {
@@ -72,7 +81,7 @@ function _locationToCourt(result) {
   return {
     id:       `postcode:${(result.postcode || result.outcode).replace(/\s+/g, "").toLowerCase()}`,
     name:     `Near ${result.label} (${result.outcode})`,
-    location: result.postcode ? `${result.postcode}, measured from the middle of ${result.outcode}` : `Measured from the middle of ${result.outcode}`,
+    location: result.postcode || "",
     lat:      result.lat,
     lon:      result.lon,
     aliases:  [],
@@ -166,7 +175,6 @@ function markContacted(chambersId, branchCity, chambersName, via) {
   data[key] = _normalizeContactRec(data[key]) || {};
   data[key][via || "phone"] = { ts: Date.now(), chamberName: chambersName || "" };
   setContacted(data);
-  updateContactedBar();
   if (state.data) renderStatusStrip();
 }
 
@@ -179,21 +187,12 @@ function _contactedMarkInner(rec) {
   const parts = [];
   if (rec.phone) parts.push({ ts: rec.phone.ts, html: `${icon("call")} Called ${_formatContactTime(rec.phone.ts)}` });
   if (rec.email) parts.push({ ts: rec.email.ts, html: `${icon("mail")} Emailed ${_formatContactTime(rec.email.ts)}` });
-  return parts.sort((a, b) => b.ts - a.ts).map(p => p.html).join("<br>");
+  return parts.sort((a, b) => b.ts - a.ts).map(p => `<span class="contacted-part">${p.html}</span>`).join(`<span class="contacted-dot" aria-hidden="true">·</span>`);
 }
 
 function _buildContactedMark(contRecord) {
   const inner = _contactedMarkInner(contRecord);
   return inner ? `<div class="branch-contacted-mark">${inner}</div>` : "";
-}
-
-function resetSession() {
-  if (!confirm("Clear the contacted list?\n\nYour stars, notes and other preferences are kept.")) return;
-  localStorage.removeItem(CONTACTED_KEY);
-  updateContactedBar();
-  if (state.data) renderStatusStrip();
-  if (state.view !== "none") renderSelection();
-  showToast("Contacted list cleared");
 }
 
 function _formatContactTime(ts) {
@@ -208,19 +207,10 @@ function _formatContactTime(ts) {
          " at " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
-function updateContactedBar() {
-  const data    = getContacted();
-  const entries = Object.keys(data);
-  const bar     = document.getElementById("contacted-bar");
-  const info    = document.getElementById("contacted-bar-info");
-  if (!bar || !info) return;
-
-  if (!entries.length) { bar.classList.add("hidden"); return; }
-  bar.classList.remove("hidden");
-  const chamberIds = new Set(entries.map(k => k.split("||")[0]));
-  info.innerHTML =
-    `<strong>${entries.length}</strong> branch${entries.length === 1 ? "" : "es"} contacted ` +
-    `at <strong>${chamberIds.size}</strong> set${chamberIds.size === 1 ? "" : "s"}`;
+// "3 branches · 2 sets", for the Contacted list's heading.
+function _contactedSummary(keys) {
+  const sets = new Set(keys.map(k => String(k).split("||")[0])).size;
+  return `${keys.length} branch${keys.length === 1 ? "" : "es"} · ${sets} set${sets === 1 ? "" : "s"}`;
 }
 
 function _b64EncodeUtf8(str) {
@@ -439,7 +429,7 @@ function copyShareLink() {
   const sel = _shareSelection();
   const done = () => {
     document.getElementById("share-modal")?.close();
-    showToast(sel.notes ? "Link copied, notes included" : "Link copied");
+    showToast(sel.notes ? "Link copied, with notes" : "Link copied");
   };
   window.cfCopy(url).then((ok) => {
     if (!ok) prompt("Copy this save link:", url);
@@ -523,7 +513,7 @@ async function buildSaveLink() {
   try {
     const encoded = await _encodeSavePayload({ contacted, prefs, recents });
     const url     = location.origin + location.pathname + "#cfx=" + encoded;
-    if (await window.cfCopy(url)) showToast("Save link copied, notes included");
+    if (await window.cfCopy(url)) showToast("Link copied, with notes");
     else prompt("Copy this save link:", url);
   } catch { showErrorToast("CF-LINK-01", "Could not build save link"); }
 }
@@ -535,7 +525,6 @@ async function buildSaveLink() {
 // their own, replace their own with it, or cancel; whichever they choose, the
 // state from before is kept once so that it can be undone from the bar.
 
-const IMPORT_BACKUP_KEY = "cf_import_backup";
 const STATE_KEYS = { prefs: PREFS_KEY, contacted: CONTACTED_KEY, recents: RECENT_SEARCHES_KEY };
 
 function _currentSaved() {
@@ -556,26 +545,9 @@ function _writeRawState(raw) {
 }
 
 function _refreshAfterImport() {
-  updateContactedBar();
   updatePrefsBar();
   if (state.data) renderStatusStrip();
   if (state.view !== "none") renderSelection();
-}
-
-function updateUndoImportButton() {
-  const btn = document.getElementById("undo-import-btn");
-  if (btn) btn.hidden = !localStorage.getItem(IMPORT_BACKUP_KEY);
-}
-
-function undoImport() {
-  let backup;
-  try { backup = JSON.parse(localStorage.getItem(IMPORT_BACKUP_KEY) || "null"); } catch { backup = null; }
-  if (!backup || !backup.raw) { updateUndoImportButton(); return; }
-  _writeRawState(backup.raw);
-  localStorage.removeItem(IMPORT_BACKUP_KEY);
-  updateUndoImportButton();
-  _refreshAfterImport();
-  showToast("Put back what you had before the link");
 }
 
 function _applyImport(parsed, mode) {
@@ -591,26 +563,24 @@ function _applyImport(parsed, mode) {
     if (Object.keys(parsed.contacted).length) next.contacted = parsed.contacted;
     if (parsed.recents.length)                next.recents   = parsed.recents;
   }
-  // Every value is turned into text first and the backup is written before
-  // anything changes, so a full disk leaves what was there exactly as it was.
+  // Every value is turned into text first, and a write that fails puts back
+  // what was there, so a full disk leaves it exactly as it was.
   const written = {};
   Object.entries(next).forEach(([name, value]) => { written[name] = JSON.stringify(value); });
   try {
-    localStorage.setItem(IMPORT_BACKUP_KEY, JSON.stringify({ ts: Date.now(), raw: before }));
     Object.entries(written).forEach(([name, text]) => localStorage.setItem(STATE_KEYS[name], text));
   } catch {
-    try { _writeRawState(before); localStorage.removeItem(IMPORT_BACKUP_KEY); } catch {  }
-    showErrorToast("CF-STORE-01", "Could not save that (this browser's storage is full)");
-    updateUndoImportButton();
+    try { _writeRawState(before); } catch {  }
+    showErrorToast("CF-STORE-01", "Storage full, not saved");
     return false;
   }
   touchPreferenceActivity();
-  updateUndoImportButton();
   _refreshAfterImport();
   return true;
 }
 
-function _importSummaryText(parsed) {
+// "3 stars, 3 hidden, 2 contacted": what a link carries.
+function _importCarriesText(parsed) {
   const s = Core.summariseImport(parsed, _currentSaved());
   const n = (count, one, many) => `${count} ${count === 1 ? one : many}`;
   const parts = [];
@@ -619,12 +589,14 @@ function _importSummaryText(parsed) {
   if (s.notes)     parts.push(n(s.notes, "note", "notes"));
   if (s.contacted) parts.push(`${s.contacted} contacted`);
   if (s.recents)   parts.push(n(s.recents, "recent search", "recent searches"));
+  return parts.length ? parts.join(", ") : `${Object.keys(parsed.prefs).length} saved items`;
+}
+
+function _importSummaryText(parsed) {
+  const s = Core.summariseImport(parsed, _currentSaved());
+  const n = (count, one, many) => `${count} ${count === 1 ? one : many}`;
   const has = s.have.prefs + s.have.contacted + s.have.recents;
-  const carries = parts.length ? parts.join(", ") : `${Object.keys(parsed.prefs).length} saved items`;
-  const yours = has
-    ? ` You already have ${has} saved item${has === 1 ? "" : "s"} on this device${s.have.notes ? `, including ${n(s.have.notes, "note", "notes")} of your own` : ""}.`
-    : " You have nothing saved on this device yet.";
-  return `This link carries ${carries}.${yours}`;
+  return `The link has ${_importCarriesText(parsed)}. You have ${has} saved here${s.have.notes ? `, ${n(s.have.notes, "note", "notes")} among them` : ""}.`;
 }
 
 function _askImport(parsed) {
@@ -638,14 +610,23 @@ function _askImport(parsed) {
   });
 }
 
-// One entry point for both routes in: a link opened, a .json file dropped.
+function _nothingSavedHere() {
+  return !_hasMeaningfulPrefs(getPrefs()) && !Object.keys(getContacted()).length && !getRecentSearches().length;
+}
+
+// One entry point for both routes in: a link opened, a .json file dropped. With nothing saved on this device there
+// is nothing to merge with or lose, so it goes straight in without asking.
 async function _offerImport(parsed, sourceLabel) {
+  if (_nothingSavedHere()) {
+    const carries = _importCarriesText(parsed);
+    if (!_applyImport(parsed, "merge")) return false;
+    showToast(`Added ${carries}`, 4000);
+    return true;
+  }
   const choice = await _askImport(parsed);
   if (choice !== "merge" && choice !== "replace") { showToast("Nothing was changed"); return false; }
   if (!_applyImport(parsed, choice)) return false;
-  showToast(choice === "merge"
-    ? `Added what was new from the ${sourceLabel}. Yours are unchanged`
-    : `Replaced your saved items with the ${sourceLabel}`, 4500);
+  showToast(choice === "merge" ? "Added to yours" : "Replaced yours");
   return true;
 }
 
@@ -667,7 +648,7 @@ async function loadFromHash() {
     } catch { parsed = null; }
     // The link is dealt with either way: left in the address it would ask again on every refresh.
     history.replaceState(null, "", location.pathname + location.search);
-    if (!parsed) { showErrorToast("CF-LINK-02", "That link does not contain anything Chambers Finder can use"); return; }
+    if (!parsed) { showErrorToast("CF-LINK-02", "Nothing usable in that link"); return; }
     await _offerImport(parsed, "link");
   } finally {
     _importing = false;
@@ -708,30 +689,67 @@ function _relativeTime(ts) {
 }
 
 function updatePrefsBar() {
-  updateUndoImportButton();
   const prefs = getPrefs();
-  const entries = Object.entries(prefs);
-  const bar  = document.getElementById("prefs-bar");
-  const info = document.getElementById("prefs-bar-info");
 
   const nothingSaved =
     !_hasMeaningfulPrefs(prefs) &&
     !Object.keys(getContacted()).length &&
     !getRecentSearches().length;
-  if (nothingSaved) { bar.classList.add("hidden"); return; }
-  bar.classList.remove("hidden");
-
-  if (entries.length === 0) {
-    info.textContent = "Saved on this device";
-    return;
-  }
-
-  const actMeta    = getActivity()._meta || {};
-  const lastChange = actMeta.lastModified ? _relativeTime(actMeta.lastModified) : "";
-  info.innerHTML = lastChange
-    ? `Local preferences changed <strong>${escapeHtml(lastChange)}</strong>`
-    : "Local preferences saved on this device";
+  // Reset sits beside the travel radius and shows only while a court, chambers or postcode is open; the lists the
+  // tiles open on their own (A to Z, Starred, Contacted...) do not count.
+  const somethingOpen = state.view === "court" || state.view === "chamber";
+  document.getElementById("restart-btn").classList.toggle("hidden", !somethingOpen);
+  // "Last saved" sits in the middle of a saved list's first heading; keep it current where one is showing.
+  document.querySelectorAll(".saved-when").forEach(el => { el.outerHTML = _savedWhenHtml(nothingSaved); });
+  _fitHeadingMids();
 }
+
+// "3d ago", for a saved list's heading: short enough to sit beside the heading, Share and bin on a phone.
+function _shortTime(ts) {
+  const mins = Math.floor((Date.now() - ts) / 60000), hours = Math.floor(mins / 60), days = Math.floor(hours / 24);
+  if (mins < 2) return "now";
+  if (mins < 60) return `${mins}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  if (days < 30) return `${days}d ago`;
+  return new Date(ts).toLocaleDateString([], { day: "numeric", month: "short" });
+}
+
+// A floppy disc and the when, in bold: "3d ago". The disc stands for "Last saved", which a screen reader and the
+// tooltip still say in full ("Last saved 3 days ago").
+function _savedWhenHtml(nothingSaved) {
+  const ts = (getActivity()._meta || {}).lastModified;
+  if (nothingSaved || !ts) return `<span class="browse-header-mid saved-when">${nothingSaved ? "No settings changed" : "Saved"}</span>`;
+  const full = `Last saved ${_relativeTime(ts)}`;
+  return `<span class="browse-header-mid saved-when" title="${escapeHtml(full)}"><span class="sr-only">${escapeHtml(full)}</span>`
+    + `<span aria-hidden="true">${icon("save")}<strong>${escapeHtml(_shortTime(ts))}</strong></span></span>`;
+}
+
+// Share, beside the bin at the right of a saved list's first heading. It shares everything saved, not one list.
+function _shareBtnHtml() {
+  return `<button type="button" class="head-share-btn" data-share title="Share your stars, notes and contacts as a link" aria-label="Share">${icon("share")}</button>`;
+}
+
+// The right-hand end of a heading: Share (first heading only), then the bin, kept apart (style.css .head-actions).
+function _headEndHtml(kind, withShare) {
+  return `<span class="head-actions">${withShare ? _shareBtnHtml() : ""}${_binHtml(kind)}</span>`;
+}
+
+// Wires a freshly drawn heading's Share and bin.
+function _bindHeadActions(el) {
+  el.querySelectorAll("[data-bin]").forEach(_bindBin);
+  el.querySelectorAll("[data-share]").forEach(b => b.addEventListener("click", openShareModal));
+  _fitHeadingMids();
+}
+
+// A heading's middle words show whole or not at all: on a narrow phone a long heading ("Starred branches (12)")
+// leaves no room for even "3d ago", and half a word reads as a fault. Measured, since CSS cannot see an overflow.
+function _fitHeadingMids() {
+  document.querySelectorAll("#results .browse-header-mid").forEach(mid => {
+    mid.classList.remove("no-room");
+    mid.classList.toggle("no-room", mid.scrollWidth > mid.clientWidth + 1);
+  });
+}
+window.addEventListener("resize", () => _fitHeadingMids());
 
 let _toastTimer = null;
 function showToast(msg, duration = 2500) {
@@ -774,9 +792,9 @@ function _branchCountLabel(ch) {
 function _matchingBranchLabels(query, ch) {
   const labels = [];
   ch.branches.forEach(branch => {
-    const fields = [branch.city, branch.name, branch.address].filter(Boolean);
+    const fields = [branch.city, branch.name, branch.label, branch.address].filter(Boolean);
     if (!fields.some(field => _matchesSearchText(query, field))) return;
-    const label = branch.city || branch.name || branch.address;
+    const label = _branchLabel(branch) || branch.address;
     if (label && !labels.includes(label)) labels.push(label);
   });
   return labels;
@@ -858,9 +876,15 @@ function renderRecentSearches() {
   if (!recents.length) { _closeSearchResults(); return; }
 
   const header = document.createElement("div");
-  header.className = "search-group-label";
-  header.textContent = "Recent";
+  header.className = "search-group-label search-group-label--bin";
+  header.innerHTML = `<span>Recent</span>${_headEndHtml("recents", true)}`;
   header.setAttribute("role", "presentation");
+  _bindHeadActions(header);
+  // Share keeps the search box focused while it is pressed (as the bin does), then closes the list for the dialog.
+  header.querySelectorAll("[data-share]").forEach(b => {
+    b.addEventListener("mousedown", e => e.preventDefault());
+    b.addEventListener("click", () => _closeSearchResults());
+  });
   el.appendChild(header);
 
   recents.forEach((entry, i) => {
@@ -904,7 +928,7 @@ function renderRecentSearches() {
 
 function doSearch(query) {
   if (!state.data || !query.trim()) {
-    state.searchResults = [];
+    state.searchResults = []; state.searchNote = "";
     renderRecentSearches();
     return;
   }
@@ -932,24 +956,25 @@ function doSearch(query) {
   if (special && special.indexOf("special-") === 0) _renderLookupProblem(special, true);
   const pp = Core.parsePostcode(query);
   const shown = pp ? (pp.postcode || pp.outcode) : "";
-  const postcode = pp
-    ? [
-        {
-          type:     "postcode",
-          label:    `Search chambers near ${shown}`,
-          sublabel: "Chambers close to this postcode",
-          obj:      { raw: query.trim(), mode: "chambers" },
-        },
-        {
-          type:     "postcode",
-          label:    `Search courts near ${shown}`,
-          sublabel: "Courts close to this postcode",
-          obj:      { raw: query.trim(), mode: "courts" },
-        },
-      ]
+  // A postcode that cannot be right is said so as it is typed, in the list, with no "Search near" entry to choose.
+  // A short outward code that some real district starts with ("SW1" on the way to "SW1A") is still being typed.
+  state.searchNote = "";
+  if (pp && _postcodeTable) {
+    const found = Core.locatePostcode(query, _postcodeTable);
+    const err = found.error;
+    const stillTyping = err === "unknown" && !pp.incode && Object.keys(_postcodeTable.d).some(k => k.startsWith(pp.outcode));
+    if ((err === "unknown" || err === "outside") && !stillTyping) state.searchNote = Core.lookupMessage(err, found.place);
+  }
+  // One entry for a postcode: the Chambers / Courts switch above the results chooses which of the two is listed.
+  const postcode = pp && !state.searchNote
+    ? [{
+        type:     "postcode",
+        label:    `Search near ${shown}`,
+        sublabel: "Chambers and courts close to this postcode",
+        obj:      { raw: query.trim(), mode: "chambers" },
+      }]
     : [];
-  // A complete postcode is shown at once (chambers near it), as it is typed; the two
-  // "search near" entries stay in the list for switching to courts.
+  // A complete postcode is shown at once (chambers near it), as it is typed.
   if (pp && pp.incode && _postcodeTable) {
     const located = Core.locatePostcode(query, _postcodeTable);
     if (located.result) {
@@ -1018,8 +1043,16 @@ function renderSearchResults() {
   el.innerHTML = "";
   el.setAttribute("aria-label", "Search suggestions");
   _searchActiveIndex = -1;
+  if (state.searchNote) {
+    const note = document.createElement("div");
+    note.className = "search-empty-state";
+    note.setAttribute("role", "alert");
+    note.textContent = state.searchNote;
+    el.appendChild(note);
+  }
   if (!state.searchResults.length) {
     const query = document.getElementById("search-input")?.value.trim();
+    if (state.searchNote) { el.style.display = "block"; _setSearchExpanded(true); return; }
     if (query) {
       const empty = document.createElement("div");
       empty.className = "search-empty-state";
@@ -1082,6 +1115,8 @@ async function _runPostcodeLookup(entry, auto = false) {
   if (!auto) document.getElementById("search-input").value = result.postcode || result.outcode;
   state.view            = "court";
   state.selectedCourt   = _locationToCourt(result);
+  state.selectedCourt.raw = raw;
+  farShown.clear();
   state.selectedCourt.searchMode = entry.obj.mode || "chambers";
   state.selectedChamber = null;
   state.fromCourt       = null;
@@ -1099,6 +1134,8 @@ async function _runPostcodeLookup(entry, auto = false) {
 // The postcode was not recognised, is outside England and Wales, or the table did not load: say which, in the results area.
 // Never ranks anything from a made-up place.
 function _renderLookupProblem(kind, quiet = false, place = "", err = null) {
+  navStack.length = 0;
+  farShown.clear();
   state.view = "none";
   state.selectedCourt = null;
   syncStatusHighlight();
@@ -1121,6 +1158,8 @@ function _renderLookupProblem(kind, quiet = false, place = "", err = null) {
 }
 
 async function chooseResult(entry) {
+  navStack.length = 0;
+  farShown.clear();
   document.getElementById("search-input").value = entry.label;
   document.getElementById("search-clear-btn").style.display = "flex";
   _closeSearchResults();
@@ -1214,8 +1253,155 @@ function _withKeptFocus(redraw) {
   else document.getElementById("results")?.focus({ preventScroll: true });
 }
 
+// ── Opening a chambers or court: Back, and real links ──────────────────────
+// Every row that opens a chambers or court is a real link (#chambers=ID or #court=ID), so a
+// middle click or Ctrl/Cmd-click opens it in a new tab, and that tab opens the page (see
+// _openFromLinkHash). A plain click is handled here instead: it remembers the list it came
+// from, and the Back button on the page it opens returns to that list, scrolled to where it was.
+const navStack = [];
+const NAV_STACK_MAX = 20;
+const NAV_VIEW_LABELS = {
+  "all-chambers": "all chambers", "all-courts": "all courts", starred: "starred",
+  hidden: "hidden", noted: "notes", contacted: "contacted",
+};
+
+function _isPlainClick(e) {
+  return e.button === 0 && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey;
+}
+
+// A row's click: a plain click opens in the page; a modified one is left to the browser.
+function _onRowClick(open) {
+  return e => {
+    if (!_isPlainClick(e)) return;
+    e.preventDefault();
+    open();
+  };
+}
+
+function _navLabel(view, court, chamber) {
+  if (view === "court" && court) return court.name;
+  if (view === "chamber" && chamber) return chamber.name;
+  return NAV_VIEW_LABELS[view] || null;
+}
+
+function _navigate(view, fields) {
+  farShown.clear();
+  const label = _navLabel(state.view, state.selectedCourt, state.selectedChamber);
+  if (label) {
+    navStack.push({
+      view: state.view, selectedCourt: state.selectedCourt, selectedChamber: state.selectedChamber,
+      fromCourt: state.fromCourt, label, scroll: window.scrollY,
+    });
+    if (navStack.length > NAV_STACK_MAX) navStack.shift();
+  }
+  state.view = view;
+  Object.assign(state, fields);
+  renderSelection();
+  syncStatusHighlight();
+  window.scrollTo(0, 0);
+}
+
+function _openCourt(court)  { _navigate("court",   { selectedCourt: court, selectedChamber: null, fromCourt: null }); }
+function _openChamber(ch)   { _navigate("chamber", { selectedChamber: ch, fromCourt: null }); }
+
+function _navBackHtml() {
+  const prev = navStack[navStack.length - 1];
+  return prev
+    ? `<button type="button" class="chamber-back-btn" data-nav-back>${icon("arrow_back")} Back to ${escapeHtml(prev.label)}</button>`
+    : "";
+}
+
+function _bindNavBack() {
+  document.querySelector("[data-nav-back]")?.addEventListener("click", () => {
+    const prev = navStack.pop();
+    if (!prev) return;
+    state.view = prev.view;
+    state.selectedCourt = prev.selectedCourt;
+    state.selectedChamber = prev.selectedChamber;
+    state.fromCourt = prev.fromCourt;
+    renderSelection();
+    syncStatusHighlight();
+    window.scrollTo(0, prev.scroll);
+  });
+}
+
+// Where the page is now, in a form a link can carry, so a chambers or court opened in a new tab
+// can show the same Back button: a list ("all-chambers", "starred", ...), a court ("court:ID") or
+// a postcode search ("pc:MODE:POSTCODE").
+function _fromRef() {
+  if (NAV_VIEW_LABELS[state.view]) return state.view;
+  const c = state.selectedCourt;
+  if (state.view !== "court" || !c) return "";
+  return c.id.startsWith("postcode:") ? `pc:${c.searchMode || "chambers"}:${c.raw || ""}` : `court:${c.id}`;
+}
+
+function _linkHref(kind, id) {
+  const from = _fromRef();
+  return `#${kind}=${encodeURIComponent(id)}${from ? `&from=${encodeURIComponent(from)}` : ""}`;
+}
+
+// The court (or postcode search) a link says it was opened from, or null if it cannot be rebuilt.
+async function _courtFromRef(ref) {
+  if (ref.startsWith("court:")) return state.data.courts.find(c => c.id === ref.slice(6)) || null;
+  const m = /^pc:(chambers|courts):(.+)$/.exec(ref);
+  if (!m) return null;
+  try {
+    const answer = Core.locatePostcode(m[2], await loadPostcodeTable());
+    if (answer.error) return null;
+    const court = _locationToCourt(answer.result);
+    court.raw = m[2];
+    court.searchMode = m[1];
+    return court;
+  } catch { return null; }
+}
+
+// A link to one chambers or court (#chambers=ID, #court=ID, with an optional &from=) opens it.
+// The other hashes are the save links, which loadFromHash deals with.
+async function _openFromLinkHash() {
+  // Focus stays where it is: in a tab with no click yet, the results box would draw a focus ring round itself.
+  const before = _keepFocus;
+  _keepFocus = true;
+  try { await _openFromLinkHashInner(); } finally { _keepFocus = before; }
+}
+
+async function _openFromLinkHashInner() {
+  const params = new URLSearchParams(location.hash.slice(1));
+  const kind = params.has("court") ? "court" : params.has("chambers") ? "chambers" : null;
+  if (!kind || !state.data) return;
+  const id = params.get(kind);
+  const from = params.get("from") || "";
+  const found = (kind === "court" ? state.data.courts : state.data.chambers).find(x => x.id === id);
+  history.replaceState(null, "", location.pathname + location.search);
+  if (!found) { showToast("Not in the list"); return; }
+  navStack.length = 0;
+  const origin = NAV_VIEW_LABELS[from] ? null : (from ? await _courtFromRef(from) : null);
+  if (NAV_VIEW_LABELS[from]) {
+    navStack.push({ view: from, selectedCourt: null, selectedChamber: null, fromCourt: null, label: NAV_VIEW_LABELS[from], scroll: 0 });
+  }
+  if (kind === "chambers" && !getChamberPrefs(found.id).seen) { setChamberPrefs(found.id, { seen: Date.now() }); updatePrefsBar(); }
+  if (kind === "chambers" && origin) {
+    // Opened from a court's own list: the same page as clicking it there, with its Back to that court.
+    state.view = "court"; state.selectedCourt = origin; state.selectedChamber = found; state.fromCourt = origin;
+    renderChamberDetail(found, origin);
+    syncStatusHighlight();
+    return;
+  }
+  if (origin) {
+    navStack.push({ view: "court", selectedCourt: origin, selectedChamber: null, fromCourt: null, label: origin.name, scroll: 0 });
+  }
+  if (kind === "court") {
+    state.view = "court"; state.selectedCourt = found; state.selectedChamber = null;
+  } else {
+    state.view = "chamber"; state.selectedChamber = found; state.selectedCourt = null;
+  }
+  state.fromCourt = null;
+  renderSelection();
+  syncStatusHighlight();
+}
+
 function renderSelection() {
   const prefs = getPrefs();
+  if (state.view !== "court" && state.view !== "chamber") _unmountMap();
   if      (state.view === "court")          renderCourt(state.selectedCourt);
   else if (state.view === "chamber")        renderChamber(state.selectedChamber);
   else if (state.view === "all-chambers")   renderBrowseChambers(state.data.chambers.filter(ch => !(prefs[ch.id]||{}).hidden).sort((a,b)=>a.name.localeCompare(b.name)), null, "visibility_off", "Chambers you hide won't appear in this list.");
@@ -1246,7 +1432,7 @@ function renderStarredHidden(kind) {
     });
   });
   branches.sort((a, b) =>
-    (a.branch.city || "").localeCompare(b.branch.city || "") ||
+    _branchLabel(a.branch).localeCompare(_branchLabel(b.branch)) ||
     a.chambers.name.localeCompare(b.chambers.name));
 
   const el = document.getElementById("results");
@@ -1268,76 +1454,69 @@ function renderStarredHidden(kind) {
   const label = kind === "starred" ? "Starred" : kind === "noted" ? "Noted" : "Hidden";
 
   const courtRows = courts.map(court => `
-    <div class="browse-row" data-court-id="${escapeHtml(court.id)}"><button type="button" class="browse-row-open" title="View ${escapeHtml(court.name)}">
+    <div class="browse-row" data-court-id="${escapeHtml(court.id)}"><a class="browse-row-open" href="${escapeHtml(_linkHref("court", court.id))}" title="View ${escapeHtml(court.name)}">
       <span class="browse-row-content">
         <span class="browse-row-main">
           <span class="browse-row-name">${escapeHtml(court.name)}</span>
         </span>
         <span class="browse-row-meta">${metaFor(prefs[_courtPrefKey(court.id)], escapeHtml(court.location || ""))}</span>
-      </span></button>
+      </span></a>
       <button type="button" class="search-item-remove" data-clear-court="${escapeHtml(court.id)}" aria-label="Remove ${escapeHtml(court.name)} from ${label}">${icon("close")}</button>
     </div>`).join("");
 
   const chamberRows = chambers.map(ch => {
-    const branchList = (ch.branches || []).map(b => escapeHtml(b.city || b.name)).join(" · ");
+    const branchList = (ch.branches || []).map(b => escapeHtml(_branchLabel(b))).join(" · ");
     const fallback = `${(ch.branches || []).length} branch${(ch.branches || []).length === 1 ? "" : "es"}${branchList ? ` · ${branchList}` : ""}`;
     return `
-    <div class="browse-row" data-ch-id="${escapeHtml(ch.id)}"><button type="button" class="browse-row-open" title="View ${escapeHtml(ch.name)}">
+    <div class="browse-row" data-ch-id="${escapeHtml(ch.id)}"><a class="browse-row-open" href="${escapeHtml(_linkHref("chambers", ch.id))}" title="View ${escapeHtml(ch.name)}">
       <span class="browse-row-content">
         <span class="browse-row-main">
           <span class="browse-row-name">${escapeHtml(ch.name)}</span>
         </span>
         <span class="browse-row-meta">${metaFor(prefs[ch.id], fallback)}</span>
-      </span></button>
+      </span></a>
       <button type="button" class="search-item-remove" data-clear-chamber="${escapeHtml(ch.id)}" aria-label="Remove ${escapeHtml(ch.name)} from ${label}">${icon("close")}</button>
     </div>`;
   }).join("");
 
   const branchRows = branches.map(({ chambers: ch, branch }) => `
-    <div class="browse-row" data-ch-id="${escapeHtml(ch.id)}"><button type="button" class="browse-row-open" title="View ${escapeHtml(ch.name)}">
+    <div class="browse-row" data-ch-id="${escapeHtml(ch.id)}"><a class="browse-row-open" href="${escapeHtml(_linkHref("chambers", ch.id))}" title="View ${escapeHtml(ch.name)}">
       <span class="browse-row-content">
         <span class="browse-row-main">
-          <span class="browse-row-name">${escapeHtml(branch.city || branch.name || "Branch")}</span>
+          <span class="browse-row-name">${escapeHtml(_branchLabel(branch) || "Branch")}</span>
           <span class="badge">${escapeHtml(ch.name)}</span>
         </span>
         <span class="browse-row-meta">${metaFor(prefs[_branchPrefKey(ch.id, branch)], escapeHtml(branch.address || ""))}</span>
-      </span></button>
-      <button type="button" class="search-item-remove" data-clear-branch-ch="${escapeHtml(ch.id)}" data-clear-branch-key="${escapeHtml(_branchKey(branch))}" aria-label="Remove ${escapeHtml(branch.city || branch.name || "branch")} from ${label}">${icon("close")}</button>
+      </span></a>
+      <button type="button" class="search-item-remove" data-clear-branch-ch="${escapeHtml(ch.id)}" data-clear-branch-key="${escapeHtml(_branchKey(branch))}" aria-label="Remove ${escapeHtml(_branchLabel(branch) || "branch")} from ${label}">${icon("close")}</button>
     </div>`).join("");
 
-  el.innerHTML = `
-    ${courts.length ? `
-    <div class="card card-flush card-flush-gap">
-      <div class="browse-header">${label} Courts (${courts.length})</div>
-      <div class="browse-list">${courtRows}</div>
-    </div>` : ""}
-    ${chambers.length ? `
-    <div class="card card-flush card-flush-gap">
-      <div class="browse-header">${label} Chambers (${chambers.length})</div>
-      <div class="browse-list">${chamberRows}</div>
-    </div>` : ""}
-    ${branches.length ? `
-    <div class="card card-flush">
-      <div class="browse-header">${label} Branches (${branches.length})</div>
-      <div class="browse-list">${branchRows}</div>
-    </div>` : ""}`;
+  // Only the first section's heading carries Last saved and Share: they cover everything saved, not one section.
+  const sections = [["Courts", courts.length, courtRows], ["Chambers", chambers.length, chamberRows], ["Branches", branches.length, branchRows]]
+    .filter(([, n]) => n);
+  el.innerHTML = sections.map(([name, n, rows], i) => `
+    <div class="card card-flush${i < sections.length - 1 ? " card-flush-gap" : ""}">
+      <div class="browse-header browse-header--bin"><span>${label} ${name} (${n})</span>${i === 0 ? _savedWhenHtml(false) : ""}${_headEndHtml(`${kind}:${name.toLowerCase()}`, i === 0)}</div>
+      <div class="browse-list">${rows}</div>
+    </div>`).join("");
 
+  _bindHeadActions(el);
   el.querySelectorAll("[data-court-id]").forEach(row => {
     const open = () => {
       const court = state.data.courts.find(c => c.id === row.dataset.courtId);
-      if (court) { state.view = "court"; state.selectedCourt = court; renderSelection(); syncStatusHighlight(); }
+      if (court) _openCourt(court);
     };
-    row.addEventListener("click", open);
+    row.addEventListener("click", _onRowClick(open));
   });
   el.querySelectorAll("[data-ch-id]").forEach(row => {
     const open = () => {
       const ch = state.data.chambers.find(c => c.id === row.dataset.chId);
       if (ch) {
         if (!getChamberPrefs(ch.id).seen) { setChamberPrefs(ch.id, { seen: Date.now() }); updatePrefsBar(); }
-        state.view = "chamber"; state.selectedChamber = ch; state.fromCourt = null; renderSelection(); syncStatusHighlight();
+        _openChamber(ch);
       }
     };
-    row.addEventListener("click", open);
+    row.addEventListener("click", _onRowClick(open));
   });
 
   const clearValue = field === "notes" ? "" : false;
@@ -1382,6 +1561,14 @@ function courtsForLocation(loc, limit) {
   return Core.courtsByDistance(state.data.courts, loc, limit);
 }
 
+// A court's own GOV.UK page (Find a Court or Tribunal): address, opening hours, contacts. Only a real
+// court has one; a postcode search's virtual court has no website and gets no button.
+function _courtWebsiteHtml(court) {
+  if (!court.website || !/^https:\/\//i.test(court.website)) return "";
+  return `<div class="branch-contact court-links"><a class="website-link" href="${escapeHtml(court.website)}" target="_blank" rel="noopener noreferrer"
+      title="The court's page on GOV.UK">${icon("language")} Website</a></div>`;
+}
+
 function renderCourt(court) {
   const all          = chambersForCourt(court);
   const hiddenRows   = all.filter(r => r.hidden);
@@ -1404,10 +1591,15 @@ function renderCourt(court) {
   // iterates the real court list). The actions row and notes are left out
   // entirely rather than shown as controls that look as if they work.
   const isPostcodeCourt = court.id.startsWith("postcode:");
-  // A postcode search is either "chambers near" or "courts near" (the two
-  // dropdown entries); each shows only its own list.
-  const courtsOnly   = isPostcodeCourt && court.searchMode === "courts";
-  const chambersOnly = isPostcodeCourt && !courtsOnly;
+  // Chambers and Courts in the header work like an accordion: one list open at a time (a postcode can also have
+  // both shut). See _listFor and _bindListToggles.
+  if (_listFor.obj !== court) {
+    const first = isPostcodeCourt && court.searchMode === "courts" ? "courts" : "chambers";
+    _listFor = { obj: court, open: first, last: first };
+  }
+  const courtsOnly   = _listFor.open === "courts";
+  const nearCourtRows = _nearbyCourts(court);
+  const nearCourtSplit = Core.splitByRadius(nearCourtRows, state.radiusMiles);
   const courtPrefs   = isPostcodeCourt ? {} : getCourtPrefs(court.id);
   const courtStarClass = courtPrefs.starred ? "pref-toggle-btn on-star" : "pref-toggle-btn";
   const courtHideClass = courtPrefs.hidden  ? "pref-toggle-btn on-hide" : "pref-toggle-btn";
@@ -1424,23 +1616,17 @@ function renderCourt(court) {
       </div>
       ${_notesSectionHtml("court-" + escapeHtml(court.id), courtPrefs.notes)}`;
 
-  let html = `
-    <div class="court-header">
-      <h2>${icon("account_balance")} ${escapeHtml(court.name)}</h2>
-      <div class="court-meta">${escapeHtml(court.location || "")}</div>
-      ${isPostcodeCourt ? `<div class="pc-mode" role="group" aria-label="Show chambers or courts near this postcode">
-        <button type="button" class="radius-btn${courtsOnly ? "" : " active"}" data-pc-mode="chambers" aria-pressed="${!courtsOnly}">Chambers</button>
-        <button type="button" class="radius-btn${courtsOnly ? " active" : ""}" data-pc-mode="courts" aria-pressed="${courtsOnly}">Courts</button>
-      </div>` : ""}
+  const headIcon = !isPostcodeCourt || _listFor.last === "courts" ? "account_balance" : "balance";
+  let html = `${_mapSlotHtml()}
+    <div class="court-header${isPostcodeCourt ? " court-header--alone" : ""}">
+      ${_mapShowRowHtml()}
+      ${_navBackHtml()}
+      <h2>${icon(headIcon)} ${escapeHtml(court.name)}</h2>
+      ${court.location ? `<div class="court-meta">${escapeHtml(court.location)}</div>` : ""}
+      ${_courtWebsiteHtml(court)}
       <div class="court-stats">
         ${courtsOnly
-          ? (() => {
-              const cs = courtsForLocation(court);
-              const split = Core.splitByRadius(cs, state.radiusMiles);
-              const within = split.near.length;
-              const further = split.far.length;
-              return `${within} court${within === 1 ? "" : "s"} within ${radiusLabel}${further ? ` · ${further} further away` : ""}`;
-            })()
+          ? `${nearCourtSplit.near.length} court${nearCourtSplit.near.length === 1 ? "" : "s"} within ${radiusLabel}${nearCourtSplit.far.length ? ` · ${nearCourtSplit.far.length} further away` : ""}`
           : `${inRadius.length} chambers within ${radiusLabel}${outOfRadius.length ? ` · ${outOfRadius.length} further away` : ""}${hiddenNote}`}
       </div>
       ${courtActionsHtml}
@@ -1448,11 +1634,10 @@ function renderCourt(court) {
   `;
 
   // A postcode is measured from like a court: the courts near it are listed the same way
-  // as the chambers (inside the travel radius first, the rest beyond it), and a chambers
-  // search also shows the courts nearest the postcode, each opening that court.
-  const placeName = court.name.replace(/^Near /, "");
+  // as the chambers (inside the travel radius first, the rest beyond it). The Chambers and
+  // Courts switch shows one list or the other, never both.
   const courtRowHtml = ({ court: c, distance }, far) => `
-        <div class="browse-row${far ? " browse-row--far" : ""}" data-nearby-court-id="${escapeHtml(c.id)}"><button type="button" class="browse-row-open"
+        <div class="browse-row${far ? " browse-row--far" : ""}" data-nearby-court-id="${escapeHtml(c.id)}"><a class="browse-row-open" href="${escapeHtml(_linkHref("court", c.id))}"
              title="View ${escapeHtml(c.name)}">
           <span class="browse-row-content">
             <span class="browse-row-main">
@@ -1460,34 +1645,48 @@ function renderCourt(court) {
               <span class="badge orange">${distance.toFixed(1)} mi</span>
             </span>
             <span class="browse-row-meta">${escapeHtml(c.location || "")}</span>
-          </span></button>
+          </span></a>
         </div>`;
   if (courtsOnly) {
-    const all = courtsForLocation(court);
-    const { near, far } = Core.splitByRadius(all, state.radiusMiles);
-    html += `<div class="browse-header browse-header--standalone">Courts near ${escapeHtml(placeName)}</div>`;
+    const { near, far } = nearCourtSplit;
     html += `<div class="chambers-list" id="courts-list-inner">`;
     if (!near.length) {
       html += `<div class="empty-msg">No courts within ${radiusLabel}. Try a wider travel radius.</div>`;
     }
     near.forEach(r => { html += courtRowHtml(r, false); });
     if (far.length) {
-      const shown = far.slice(0, 8);
+      const shown = far.slice(0, _farCount(court, "courts"));
       html += `<div class="outside-radius-header">Beyond ${state.radiusMiles} miles · ${far.length} more court${far.length === 1 ? "" : "s"}${far.length > shown.length ? `, nearest ${shown.length} shown` : ""}</div>`;
       shown.forEach(r => { html += courtRowHtml(r, true); });
+      // A list that stops without saying so reads as the whole list: say how many are left.
+      if (far.length > shown.length) {
+        const left = far.length - shown.length;
+        html += `<div class="show-more-row"><button type="button" class="btn-sm" id="show-more-courts">Show ${Math.min(left, FAR_STEP)} more courts · ${left} left</button></div>`;
+      }
     }
     html += `</div>`;
-  } else if (chambersOnly) {
-    const nearest = courtsForLocation(court, 3);
-    html += `<div class="browse-header browse-header--standalone">Nearest courts to ${escapeHtml(placeName)}</div>`;
-    html += `<div class="chambers-list" id="courts-list-inner">${nearest.map(r => courtRowHtml(r, false)).join("")}</div>`;
-    html += `<div class="browse-header browse-header--standalone">Chambers near ${escapeHtml(placeName)}</div>`;
   }
 
   if (courtsOnly) {
     document.getElementById("results").innerHTML = html;
+    document.getElementById("show-more-courts")?.addEventListener("click", () => {
+      _farMore(court, "courts");
+      _withKeptFocus(() => renderCourt(court));
+    });
     _bindNearbyCourtRows();
-    _bindPostcodeMode(court);
+    _bindNavBack();
+    _mountMap(court, true);
+    _bindListToggles();
+    _focusResults();
+    return;
+  }
+
+  if (_listFor.open !== "chambers") {
+    // Both lists shut (a postcode only): the header alone.
+    document.getElementById("results").innerHTML = html;
+    _bindNavBack();
+    _mountMap(court, _listFor.last === "courts");
+    _bindListToggles();
     _focusResults();
     return;
   }
@@ -1502,19 +1701,28 @@ function renderCourt(court) {
 
   inRadius.forEach(row => { html += _chamberListItemHtml(row, false); });
 
-  // A postcode search lists only the nearest chambers beyond the radius (the rest is a long tail
-  // that is no help).
-  const farRows = isPostcodeCourt ? outOfRadius.slice(0, 10) : outOfRadius;
-  if (farRows.length > 0) {
-    html += `<div class="outside-radius-header">Beyond ${state.radiusMiles} miles · ${outOfRadius.length} more chamber${outOfRadius.length === 1 ? "" : "s"}${farRows.length < outOfRadius.length ? `, nearest ${farRows.length} shown` : ""}</div>`;
-    farRows.forEach(row => { html += _chamberListItemHtml(row, true); });
+  if (outOfRadius.length > 0) {
+    const farShownRows = outOfRadius.slice(0, _farCount(court, "chambers"));
+    html += `<div class="outside-radius-header">Beyond ${state.radiusMiles} miles · ${outOfRadius.length} more chamber${outOfRadius.length === 1 ? "" : "s"}${outOfRadius.length > farShownRows.length ? `, nearest ${farShownRows.length} shown` : ""}</div>`;
+    farShownRows.forEach(row => { html += _chamberListItemHtml(row, true); });
+    // A list that stops without saying so reads as the whole list: say how many are left.
+    if (outOfRadius.length > farShownRows.length) {
+      const left = outOfRadius.length - farShownRows.length;
+      html += `<div class="show-more-row"><button type="button" class="btn-sm" id="show-more-chambers">Show ${Math.min(left, FAR_STEP)} more chambers · ${left} left</button></div>`;
+    }
   }
 
   html += `</div>`;
   document.getElementById("results").innerHTML = html;
+  document.getElementById("show-more-chambers")?.addEventListener("click", () => {
+    _farMore(court, "chambers");
+    _withKeptFocus(() => renderCourt(court));
+  });
   _bindListItemEvents(court);
   _bindNearbyCourtRows();
-  _bindPostcodeMode(court);
+  _bindNavBack();
+  _mountMap(court, false);
+  _bindListToggles();
   if (!isPostcodeCourt) {
     document.getElementById("court-star-btn").addEventListener("click", () => {
       const cp = getCourtPrefs(court.id);
@@ -1526,7 +1734,7 @@ function renderCourt(court) {
     document.getElementById("court-hide-btn").addEventListener("click", () => {
       const cp = getCourtPrefs(court.id);
       setCourtPrefs(court.id, { hidden: !cp.hidden });
-      showToast(cp.hidden ? "Court is now visible again" : "Court will now be hidden");
+      showToast(cp.hidden ? "Court shown" : "Court hidden");
       _withKeptFocus(() => renderCourt(court));
       renderStatusStrip();
     });
@@ -1539,29 +1747,303 @@ function renderCourt(court) {
   _focusResults();
 }
 
-// Rows under "Courts near X" open the real court they name.
-// Chambers or courts near a postcode: one search, two views, switched here.
-function _bindPostcodeMode(court) {
-  document.querySelectorAll("[data-pc-mode]").forEach(btn => {
-    btn.addEventListener("click", () => {
-      court.searchMode = btn.dataset.pcMode;
-      _withKeptFocus(() => renderCourt(court));
-    });
-  });
+// The courts near a place, nearest first, not counting the court itself.
+function _nearbyCourts(court) {
+  return courtsForLocation(court).filter(r => r.court.id !== court.id);
+}
+
+// Which list the court or postcode on show has open, Chambers or Courts: one at a time, chosen with the tiles above.
+let _listFor = { obj: null, open: "chambers", last: "chambers" };
+
+// Brings an element to the top of the screen, below the map where the map stays pinned (wide screens).
+function _scrollToTop(target) {
+  if (!target) return;
+  const card = document.querySelector(".map-card");
+  const offset = card && getComputedStyle(card).position === "sticky" ? card.offsetHeight + 16 : 8;
+  const calm = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  window.scrollTo({ top: Math.max(0, target.getBoundingClientRect().top + window.scrollY - offset), behavior: calm ? "auto" : "smooth" });
+}
+
+// Takes the page to a list and lights it up; `to` is where the page stops, the list itself unless given.
+function _scrollToList(id, to) {
+  const list = document.getElementById(id);
+  if (!list) return;
+  _scrollToTop(to || list);
+  list.classList.add("list-flash");
+  setTimeout(() => list.classList.remove("list-flash"), 1500);
+}
+
+// Every court draw ends here, so the Chambers and Courts tiles always match the list that is open.
+function _bindListToggles() {
+  syncStatusHighlight();
+}
+
+// Opens the court's (or postcode's) Chambers or Courts list, from the tiles above, then takes the page to the top of
+// that list (for a postcode, to its "Near" header, which says what the list is near) and lights the list up.
+function _switchList(court, want) {
+  if (_listFor.open !== want) {
+    _listFor.open = want;
+    _listFor.last = want;
+    if (court.id.startsWith("postcode:")) court.searchMode = want;
+    _withKeptFocus(() => renderCourt(court));
+  }
+  _scrollToList(`${want}-list-inner`, court.id.startsWith("postcode:") ? document.querySelector("#results .court-header") : null);
 }
 
 function _bindNearbyCourtRows() {
   document.querySelectorAll("[data-nearby-court-id]").forEach(row => {
     const open = () => {
       const real = state.data.courts.find(c => c.id === row.dataset.nearbyCourtId);
-      if (real) { state.view = "court"; state.selectedCourt = real; renderSelection(); syncStatusHighlight(); }
+      if (real) _openCourt(real);
     };
-    row.addEventListener("click", open);
+    row.addEventListener("click", _onRowClick(open));
   });
 }
 
+// ── The map: every place in the list, and where the search started ──────────────────────────────────────
+// One map per court or postcode. It is built once and kept across the re-draws a star or a "Show more" causes
+// (so a zoom survives them), and thrown away when the page leaves the court view. Hovering a row marks its pin red,
+// and hovering a pin marks its row; if the pin is off the map, the map widens to show it and the start point.
+let _map = null;
+let _mapKey = "";
+let _mapFitSig = "";
+
+function _mapHidden() {
+  try { return localStorage.getItem(MAP_HIDDEN_KEY) === "1"; } catch { return false; }
+}
+function _setMapHidden(hidden) {
+  try { localStorage.setItem(MAP_HIDDEN_KEY, hidden ? "1" : "0"); } catch { /* the choice is just not remembered */ }
+}
+
+// The map is a card; its Hide button sits with Zoom, Fit and All. Hidden, a row like the lists' "Show more" row turned
+// upside down is the top of the court's card below (_mapShowRowHtml).
+function _mapSlotHtml() {
+  if (!window.CFMap) return "";
+  return _mapHidden()
+    ? ""
+    : `<div class="map-card"><div class="map-view" id="map-slot" role="group" aria-label="Map of the places listed below. The list has the same information."></div></div>`;
+}
+
+function _mapShowRowHtml(alone = false) {
+  return window.CFMap && _mapHidden()
+    ? `<div class="map-show-row${alone ? " map-show-row--alone" : ""}"><button type="button" class="btn-sm" id="map-show">Show map</button></div>`
+    : "";
+}
+
+function loadMapOutline() {
+  if (_mapOutline) return Promise.resolve(_mapOutline);
+  if (!_mapLoad) {
+    _mapLoad = fetch(MAP_URL)
+      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+      .then(j => { if (!j || !Array.isArray(j.land)) throw new Error("bad map outline"); _mapOutline = j; return j; })
+      .catch(err => { _mapLoad = null; throw err; });
+  }
+  return _mapLoad;
+}
+
+function _unmountMap() {
+  if (_map) { _map.destroy(); _map = null; _mapKey = ""; _mapFitSig = ""; }
+}
+
+// What the map shows for this court or postcode: a pin for every branch of every chambers (or every court),
+// dimmed beyond the travel radius, green once a branch has been called; and the places the list shows right now,
+// which is what the map first frames.
+function _mapContent(court, courtsOnly) {
+  const radius = state.radiusMiles;
+  const contacted = getContacted();
+  const points = [], framed = [];
+  if (courtsOnly) {
+    const all = _nearbyCourts(court);
+    const { near, far } = Core.splitByRadius(all, radius);
+    const shown = new Set(near.concat(far.slice(0, _farCount(court, "courts"))).map(r => r.court.id));
+    all.forEach(({ court: c, distance }) => {
+      const cp = getCourtPrefs(c.id);
+      const pt = { id: "court:" + c.id, kind: "court", lat: c.lat, lon: c.lon, label: c.name, sub: `${distance.toFixed(1)} mi`, state: cp.hidden ? "hidden" : cp.starred ? "starred" : "", dim: radius !== null && distance > radius };
+      points.push(pt); if (shown.has(c.id)) framed.push(pt);
+    });
+    return { points, framed };
+  }
+  const rows = chambersForCourt(court).filter(r => state.showHidden || !r.hidden);
+  const near = rows.filter(r => radius === null || r.distance <= radius);
+  const far = rows.filter(r => radius !== null && r.distance > radius).slice(0, _farCount(court, "chambers"));
+  const shown = new Set(near.concat(far).map(r => r.chambers.id));
+  const prefs = getPrefs();
+  rows.forEach(({ chambers: ch, nearestBranch }) => {
+    ch.branches.forEach(b => {
+      const bp = prefs[_branchPrefKey(ch.id, b)] || {}, cp = prefs[ch.id] || {};
+      const isHidden = !!(bp.hidden || cp.hidden);
+      if (isHidden && !state.showHidden) return;
+      const d = haversine(court.lat, court.lon, b.lat, b.lon);
+      const rec = _normalizeContactRec(contacted[ch.id + "||" + _branchKey(b)]);
+      const pt = { id: ch.id, kind: "chambers", lat: b.lat, lon: b.lon, label: ch.name, branch: _branchLabel(b), sub: `${_branchLabel(b)} · ${d.toFixed(1)} mi`,
+        // red if hidden, then green if called or emailed, then yellow if starred, else grey
+        state: isHidden ? "hidden" : rec && (rec.phone || rec.email) ? "contacted" : bp.starred || cp.starred ? "starred" : "", dim: radius !== null && d > radius };
+      points.push(pt);
+      if (shown.has(ch.id) && b === nearestBranch) framed.push(pt);
+    });
+  });
+  return { points, framed };
+}
+
+function _mapRows(id) {
+  const sel = id.includes("||") ? `#results [data-branch-item="${CSS.escape(id)}"]`
+    : id.startsWith("court:") ? `#results [data-nearby-court-id="${CSS.escape(id.slice(6))}"]`
+    : `#results [data-court-item][data-id="${CSS.escape(id)}"]`;
+  return document.querySelectorAll(sel);
+}
+
+// The pins of one chambers: an office each, so a chambers has its own map as well as showing on a court's.
+function _mapContentChamber(ch) {
+  const prefs = getPrefs(), contacted = getContacted(), cp = prefs[ch.id] || {};
+  const points = [];
+  (ch.branches || []).forEach(b => {
+    if (!Number.isFinite(b.lat) || !Number.isFinite(b.lon)) return;
+    const bp = prefs[_branchPrefKey(ch.id, b)] || {};
+    const rec = _normalizeContactRec(contacted[ch.id + "||" + _branchKey(b)]);
+    points.push({ id: ch.id + "||" + _branchKey(b), kind: "chambers", lat: b.lat, lon: b.lon, label: ch.name, branch: _branchLabel(b), sub: _branchLabel(b),
+      state: bp.hidden || cp.hidden ? "hidden" : rec && (rec.phone || rec.email) ? "contacted" : bp.starred || cp.starred ? "starred" : "", dim: false });
+  });
+  return { points, framed: points };
+}
+
+function _flash(el) {
+  if (!el) return;
+  el.classList.add("list-flash");
+  setTimeout(() => el.classList.remove("list-flash"), 1500);
+}
+
+// Redraws what is on the page (the map's Hide and Show buttons use it): a chambers opened from a court is the
+// court's view with a chambers page drawn over it.
+function _redrawCurrent() {
+  if (state.view === "court" && document.getElementById("chamber-detail") && state.selectedChamber) renderChamberDetail(state.selectedChamber, state.fromCourt);
+  else renderSelection();
+}
+
+// ctx: { key, start, radius, content(), onSelect(id) }. The map is built once per key and kept across re-draws.
+function _mountMapCtx(ctx) {
+  const slot = document.getElementById("map-slot");
+  document.getElementById("map-show")?.addEventListener("click", () => { _setMapHidden(false); _unmountMap(); _redrawCurrent(); });
+  if (!slot || !window.CFMap) return;
+  const key = ctx.key;
+  loadMapOutline().then(outline => {
+    const here = document.getElementById("map-slot");
+    if (!here) return;                                           // the page moved on while the outline loaded
+    if (_map && _mapKey !== key) _unmountMap();
+    if (!_map) {
+      _mapKey = key;
+      _map = window.CFMap.create(here, outline, {
+        onHide: () => { _setMapHidden(true); _unmountMap(); _redrawCurrent(); },
+        onHover: id => {
+          document.querySelectorAll("#results .map-linked").forEach(r => r.classList.remove("map-linked"));
+          if (id) _mapRows(id).forEach(r => r.classList.add("map-linked"));
+        },
+        onSelect: ctx.onSelect,
+      });
+    } else if (here !== _map.el) {
+      here.replaceWith(_map.el);                                 // the same map, back in the freshly drawn page
+      _map.resize();
+    }
+    const { points, framed } = ctx.content();
+    _map.setStart(ctx.start);
+    _map.setRadius(ctx.radius);
+    _map.setPoints(points);
+    const sig = [key, ctx.radius, framed.length].join("|");
+    if (sig !== _mapFitSig) { _mapFitSig = sig; _map.fit(framed, true); }
+    if (_mapPending) { const want = _mapPending; _mapPending = null; _focusMapOn(want.id, want.branchKey, want.label); }
+  }).catch((err) => {
+    // The map is an extra: if it cannot be made the page goes on without it, but say why where a developer will see it.
+    console.error("Chambers Finder map did not load:", err);
+    document.getElementById("map-slot")?.remove();
+  });
+}
+
+function _mountMap(court, courtsOnly) {
+  _mountMapCtx({
+    key: court.id + "|" + (courtsOnly ? "courts" : "chambers"),
+    start: { lat: court.lat, lon: court.lon, label: court.name.replace(/^Near /, "") },
+    radius: state.radiusMiles,
+    content: () => _mapContent(court, courtsOnly),
+    onSelect: id => {
+      if (id.startsWith("court:")) { const c = state.data.courts.find(x => x.id === id.slice(6)); if (c) _openCourt(c); return; }
+      const ch = state.data.chambers.find(x => x.id === id);
+      if (!ch) return;
+      if (courtsOnly) _openChamber(ch); else _openChamberFromCourt(ch, court);
+    },
+  });
+}
+
+function _mountMapChamber(ch, court) {
+  _mountMapCtx({
+    key: "chamber:" + ch.id + "|" + (court ? court.id : ""),
+    start: court ? { lat: court.lat, lon: court.lon, label: court.name.replace(/^Near /, "") } : null,
+    radius: court ? state.radiusMiles : null,
+    content: () => _mapContentChamber(ch),
+    onSelect: id => {
+      const row = document.querySelector(`#results [data-branch-item="${CSS.escape(id)}"]`);
+      if (!row) return;
+      const calm = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      row.scrollIntoView({ block: "center", behavior: calm ? "auto" : "smooth" });
+      _flash(row);
+    },
+  });
+}
+
+// The Map button next to Website: shows this office on the map (the map is above the list, on a court's page and on
+// a chambers' own page), zooming to its pin. With the map hidden it is shown again first.
+let _mapPending = null;
+
+function _focusMapOn(id, branchKey, label) {
+  const card = document.querySelector(".map-card");
+  if (!_map || !card) return false;
+  if (_mapKey.startsWith("chamber:")) _map.focus(id + "||" + branchKey);
+  else _map.focus(id, label);
+  const calm = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  card.scrollIntoView({ block: "nearest", behavior: calm ? "auto" : "smooth" });
+  return true;
+}
+
+function _showBranchOnMap(id, branchKey) {
+  const ch = state.data.chambers.find(c => c.id === id);
+  const branch = ch?.branches.find(b => _branchKey(b) === branchKey);
+  if (!branch) return;
+  const label = _branchLabel(branch);
+  if (!_mapHidden() && _focusMapOn(id, branchKey, label)) return;
+  _mapPending = { id, branchKey, label };
+  if (_mapHidden()) { _setMapHidden(false); _unmountMap(); _redrawCurrent(); }
+}
+
+function _bindMapButtons() {
+  document.querySelectorAll("[data-show-map]").forEach(button => {
+    button.addEventListener("click", event => {
+      event.preventDefault();
+      event.stopPropagation();
+      _showBranchOnMap(button.dataset.contactId, button.dataset.contactBranch);
+    });
+  });
+}
+
+// A row hovered or focused marks its pin; leaving it clears the mark.
+function _bindMapHover() {
+  const results = document.getElementById("results");
+  const idOf = (row) => row.dataset.branchItem || (row.dataset.nearbyCourtId ? "court:" + row.dataset.nearbyCourtId : row.dataset.id || null);
+  const rowOf = (t) => t.closest && t.closest("[data-court-item], [data-nearby-court-id], [data-branch-item]");
+  const on = (e) => { const row = rowOf(e.target); const id = row && idOf(row); if (id && _map) _map.highlight([id]); };
+  const off = (e) => { const row = rowOf(e.target); if (row && _map && !(e.relatedTarget && row.contains(e.relatedTarget))) _map.highlight(null); };
+  results.addEventListener("mouseover", on);
+  results.addEventListener("mouseout", off);
+  results.addEventListener("focusin", on);
+  results.addEventListener("focusout", off);
+}
+
+// Two offices of one chambers can share a city (Trinity has two in Newcastle). An office like that carries its own
+// `key` (what a saved Called record is filed under) and `label` (what is shown); every other branch uses its city,
+// exactly as before, so no saved record moves.
 function _branchKey(branch) {
-  return branch?.city || branch?.name || "";
+  return branch?.key || branch?.city || branch?.name || "";
+}
+
+function _branchLabel(branch) {
+  return branch?.label || branch?.city || branch?.name || "";
 }
 
 function _contactValue(ch, branch, via) {
@@ -1614,7 +2096,7 @@ function _branchActionsHtml(ch, branch) {
         title="${bp.hidden ? "Unhide this branch" : "Hide this branch"}"
         aria-label="${bp.hidden ? "Unhide branch" : "Hide branch"}">${bp.hidden ? icon("visibility_off") : icon("visibility")}</button>
       <button class="star-btn${bp.starred ? " starred" : ""}" data-branch-star="${id}" data-branch-key="${key}"
-        title="${bp.starred ? "Remove star" : "Star this branch"}"
+        title="${bp.starred ? "Unstar this branch" : "Star this branch"}"
         aria-label="${bp.starred ? "Unstar branch" : "Star branch"}">${bp.starred ? icon("star", "icon-fill") : icon("star")}</button>
     </div>`;
 }
@@ -1628,7 +2110,7 @@ function _bindBranchActions(rerender) {
       if (!branch) return;
       const bp = getBranchPrefs(ch.id, branch);
       setBranchPrefs(ch.id, branch, { hidden: !bp.hidden });
-      showToast(bp.hidden ? "Branch is now visible again" : "Branch hidden");
+      showToast(bp.hidden ? "Branch shown" : "Branch hidden");
       renderStatusStrip();
       _withKeptFocus(rerender);
     });
@@ -1641,11 +2123,18 @@ function _bindBranchActions(rerender) {
       if (!branch) return;
       const bp = getBranchPrefs(ch.id, branch);
       setBranchPrefs(ch.id, branch, { starred: !bp.starred });
-      showToast(bp.starred ? "Removed from starred" : "Branch starred");
+      showToast(bp.starred ? "Removed from starred" : "Starred");
       renderStatusStrip();
       _withKeptFocus(rerender);
     });
   });
+}
+
+function _mapButtonHtml(ch, branch, compact) {
+  if (!window.CFMap || !Number.isFinite(branch?.lat) || !Number.isFinite(branch?.lon)) return "";
+  return `<button class="website-link map-btn${compact ? " compact" : ""}" type="button" data-show-map="1"
+      data-contact-id="${escapeHtml(ch.id)}" data-contact-branch="${escapeHtml(_branchKey(branch))}"
+      title="Show this office on the map">${icon("map")} Map</button>`;
 }
 
 function _branchContactButtonsHtml(ch, branch, compact = false) {
@@ -1653,9 +2142,10 @@ function _branchContactButtonsHtml(ch, branch, compact = false) {
     _copyContactButtonHtml(ch, branch, "phone", compact),
     _copyContactButtonHtml(ch, branch, "email", compact),
     _copyContactButtonHtml(ch, branch, "address", compact),
-    ch.website && !compact && /^https?:\/\//i.test(ch.website)
-      ? `<a class="website-link" href="${escapeHtml(ch.website)}" target="_blank" rel="noopener noreferrer">${icon("language")} Website</a>`
+    ch.website && /^https?:\/\//i.test(ch.website)
+      ? `<a class="website-link${compact ? " compact" : ""}" href="${escapeHtml(ch.website)}" target="_blank" rel="noopener noreferrer">${icon("language")} Website</a>`
       : "",
+    _mapButtonHtml(ch, branch, compact),
   ].filter(Boolean).join("");
   return buttons ? `<div class="branch-contact${compact ? " compact-contact" : ""}">${buttons}</div>` : "";
 }
@@ -1669,11 +2159,11 @@ function _chamberListItemHtml(row, dimmed) {
 
   const metaParts = [];
   if (row.nearestBranch) {
-    const loc = row.nearestBranch.city || row.nearestBranch.address || "";
+    const loc = _branchLabel(row.nearestBranch) || row.nearestBranch.address || "";
     if (loc) metaParts.push(escapeHtml(loc));
   }
   if (cp.starred) metaParts.push(`<span class="badge starred">${icon("star", "icon-fill")} Starred</span>`);
-  if (row.hidden) metaParts.push(`<span class="badge hidden-badge">Hidden</span>`);
+  if (row.hidden) metaParts.push(`<span class="badge hidden-badge">${icon("visibility_off")} Hidden</span>`);
   if (row.chambers.branches.length > 1) {
     metaParts.push(`<span class="badge">${row.chambers.branches.length} branches</span>`);
   }
@@ -1681,7 +2171,7 @@ function _chamberListItemHtml(row, dimmed) {
   const contData = getContacted();
   const contactedVias = { phone: false, email: false };
   row.chambers.branches.forEach(b => {
-    const rec = _normalizeContactRec(contData[row.chambers.id + "||" + (b.city || b.name || "")]);
+    const rec = _normalizeContactRec(contData[row.chambers.id + "||" + _branchKey(b)]);
     if (rec?.phone) contactedVias.phone = true;
     if (rec?.email) contactedVias.email = true;
   });
@@ -1690,10 +2180,10 @@ function _chamberListItemHtml(row, dimmed) {
   return `
     <div class="${itemClass}" data-id="${escapeHtml(row.chambers.id)}" data-court-item="1">
       <div class="chambers-item-main">
-        <button type="button" class="chambers-item-open" data-open-chambers="${escapeHtml(row.chambers.id)}">
+        <a class="chambers-item-open" href="${escapeHtml(_linkHref("chambers", row.chambers.id))}" data-open-chambers="${escapeHtml(row.chambers.id)}">
           <span class="chambers-item-name">${escapeHtml(row.chambers.name)}</span>
           <span class="chambers-item-meta">${metaParts.join("")}</span>
-        </button>
+        </a>
         ${row.nearestBranch ? _branchContactButtonsHtml(row.chambers, row.nearestBranch, true) : ""}
       </div>
       <div class="chambers-item-actions">
@@ -1733,33 +2223,37 @@ function _bindListItemEvents(court) {
       const id = btn.dataset.eye;
       const cp = getChamberPrefs(id);
       setChamberPrefs(id, { hidden: !cp.hidden });
-      showToast(cp.hidden ? "Chambers is now visible again" : "Chambers hidden");
+      showToast(cp.hidden ? "Chambers shown" : "Chambers hidden");
       _withKeptFocus(() => renderCourt(court));
       renderStatusStrip();
     });
   });
 
   _bindContactButtons();
+  _bindMapButtons();
 
   list.querySelectorAll("[data-court-item]").forEach(item => {
     const open = () => {
-      const id = item.dataset.id;
-      const ch = state.data.chambers.find(c => c.id === id);
-      if (ch) {
-        if (!getChamberPrefs(id).seen) { setChamberPrefs(id, { seen: Date.now() }); updatePrefsBar(); }
-        state.selectedChamber = ch;
-        state.fromCourt = court;
-        state.lastOpenedChamberId = id;
-        renderChamberDetail(ch, court);
-      }
+      const ch = state.data.chambers.find(c => c.id === item.dataset.id);
+      if (ch) _openChamberFromCourt(ch, court);
     };
     // The name is a real button (Enter and Space work natively); a click anywhere
     // else on the row that is not one of its own controls opens it too.
     item.addEventListener("click", e => {
-      if (e.target.closest("[data-star]") || e.target.closest("[data-eye]") || e.target.closest("[data-copy-contact]")) return;
+      if (e.target.closest("[data-star]") || e.target.closest("[data-eye]") || e.target.closest("[data-copy-contact]") || e.target.closest("[data-show-map]")) return;
+      if (!_isPlainClick(e)) return;
+      e.preventDefault();
       open();
     });
   });
+}
+
+function _openChamberFromCourt(ch, court) {
+  if (!getChamberPrefs(ch.id).seen) { setChamberPrefs(ch.id, { seen: Date.now() }); updatePrefsBar(); }
+  state.selectedChamber = ch;
+  state.fromCourt = court;
+  state.lastOpenedChamberId = ch.id;
+  renderChamberDetail(ch, court);
 }
 
 function renderChamberDetail(ch, court) {
@@ -1774,13 +2268,13 @@ function renderChamberDetail(ch, court) {
       const inR = state.radiusMiles === null || d <= state.radiusMiles;
       distHtml  = `<span class="badge ${inR ? "orange" : ""}">${isFinite(d) ? d.toFixed(1) + " mi" : "n/a"}</span>`;
     }
-    const contRecord = isContacted(ch.id, b.city || b.name || "");
+    const contRecord = isContacted(ch.id, _branchKey(b));
     const contactedHtml = _buildContactedMark(contRecord);
     const bp = getBranchPrefs(ch.id, b);
     branchesHtml += `
-      <div class="branch-item${bp.hidden ? " hidden-item" : ""}">
+      <div class="branch-item${bp.hidden ? " hidden-item" : ""}" data-branch-item="${escapeHtml(ch.id)}||${escapeHtml(_branchKey(b))}">
         <div class="branch-item-header">
-          <div class="branch-city">${escapeHtml(b.city || "Branch")}${bp.starred ? ` <span class="badge starred">${icon("star", "icon-fill")} Starred</span>` : ""}${bp.hidden ? ` <span class="badge hidden-badge">Hidden</span>` : ""}</div>
+          <div class="branch-city">${escapeHtml(_branchLabel(b) || "Branch")}${bp.starred ? ` <span class="badge starred">${icon("star", "icon-fill")} Starred</span>` : ""}${bp.hidden ? ` <span class="badge hidden-badge">${icon("visibility_off")} Hidden</span>` : ""}</div>
           <div class="branch-item-right">${distHtml}${_branchActionsHtml(ch, b)}</div>
         </div>
         <div class="branch-address">${escapeHtml(b.address || "")}</div>
@@ -1790,9 +2284,10 @@ function renderChamberDetail(ch, court) {
   });
 
   document.getElementById("results").innerHTML = `
+    ${_mapSlotHtml()}${_mapShowRowHtml(true)}
     <div class="chamber-detail-wrap" id="chamber-detail">
       <div class="chamber-detail-header">
-        <h3>${icon("gavel")} ${escapeHtml(ch.name)}</h3>
+        <h3>${icon("balance")} ${escapeHtml(ch.name)}</h3>
         <button class="chamber-back-btn" id="chamber-back-btn">${icon("arrow_back")} Back to ${escapeHtml(court ? court.name : "court")}</button>
       </div>
       ${_chamberPrefsHeaderHtml(ch.id, cp)}
@@ -1811,7 +2306,9 @@ function renderChamberDetail(ch, court) {
 
   _bindPrefsActions(ch.id, court,  true);
   _bindContactButtons();
+  _bindMapButtons();
   _bindBranchActions(() => renderChamberDetail(ch, court));
+  _mountMapChamber(ch, court);
   _focusResults();
 }
 
@@ -1821,13 +2318,13 @@ function renderChamber(ch) {
 
   let branchesHtml = "";
   sortedBranches.forEach(b => {
-    const contRecord    = isContacted(ch.id, b.city || b.name || "");
+    const contRecord    = isContacted(ch.id, _branchKey(b));
     const contactedHtml = _buildContactedMark(contRecord);
     const bp = getBranchPrefs(ch.id, b);
     branchesHtml += `
-      <div class="branch-item${bp.hidden ? " hidden-item" : ""}">
+      <div class="branch-item${bp.hidden ? " hidden-item" : ""}" data-branch-item="${escapeHtml(ch.id)}||${escapeHtml(_branchKey(b))}">
         <div class="branch-item-header">
-          <div class="branch-city">${escapeHtml(b.city || "Branch")}${bp.starred ? ` <span class="badge starred">${icon("star", "icon-fill")} Starred</span>` : ""}${bp.hidden ? ` <span class="badge hidden-badge">Hidden</span>` : ""}</div>
+          <div class="branch-city">${escapeHtml(_branchLabel(b) || "Branch")}${bp.starred ? ` <span class="badge starred">${icon("star", "icon-fill")} Starred</span>` : ""}${bp.hidden ? ` <span class="badge hidden-badge">${icon("visibility_off")} Hidden</span>` : ""}</div>
           <div class="branch-item-right">${_branchActionsHtml(ch, b)}</div>
         </div>
         <div class="branch-address">${escapeHtml(b.address || "")}</div>
@@ -1837,17 +2334,22 @@ function renderChamber(ch) {
   });
 
   document.getElementById("results").innerHTML = `
-    <div class="chamber-detail-wrap">
+    ${_mapSlotHtml()}${_mapShowRowHtml(true)}
+    <div class="chamber-detail-wrap" id="chamber-page">
       <div class="chamber-detail-header">
-        <h3>${icon("gavel")} ${escapeHtml(ch.name)}</h3>
+        <h3>${icon("balance")} ${escapeHtml(ch.name)}</h3>
+        ${_navBackHtml()}
       </div>
       ${_chamberPrefsHeaderHtml(ch.id, cp)}
       <div class="branches-list">${branchesHtml}</div>
     </div>`;
 
   _bindPrefsActions(ch.id, null,  false);
+  _bindNavBack();
   _bindContactButtons();
+  _bindMapButtons();
   _bindBranchActions(() => renderChamber(ch));
+  _mountMapChamber(ch, null);
   _focusResults();
 }
 
@@ -1857,7 +2359,7 @@ function _branchesSortedByDistance(ch, court) {
       return haversine(court.lat, court.lon, a.lat, a.lon) -
              haversine(court.lat, court.lon, b.lat, b.lon);
     }
-    return (a.city || "").localeCompare(b.city || "");
+    return _branchLabel(a).localeCompare(_branchLabel(b));
   });
 }
 
@@ -1911,10 +2413,10 @@ function _chamberPrefsHeaderHtml(id, cp) {
   const hideClass = cp.hidden  ? "pref-toggle-btn on-hide" : "pref-toggle-btn";
   const starLabel = cp.starred
     ? `${icon("star", "icon-fill")} Starred`
-    : `${icon("star")} Star this chambers`;
+    : `${icon("star")} Star chambers`;
   const hideLabel = cp.hidden
     ? `${icon("visibility_off")} Hidden`
-    : `${icon("visibility")} Hide this chambers`;
+    : `${icon("visibility")} Hide chambers`;
 
   return `
     <div class="chamber-prefs-header" id="prefs-panel-${eid}">
@@ -1938,15 +2440,15 @@ function _notesSectionHtml(domId, notes) {
 function _bindNotesInput(domId, onSave) {
   const notesEl    = document.getElementById(`notes-${domId}`);
   const notesCount = document.getElementById(`notes-char-count-${domId}`);
-  let notesTimer;
+  let notesTimer = null;
+  const save = () => { notesTimer = null; onSave(notesEl.value); showToast("Notes saved"); };
   notesEl?.addEventListener("input", () => {
     if (notesCount) notesCount.textContent = notesEl.value.length;
     clearTimeout(notesTimer);
-    notesTimer = setTimeout(() => {
-      onSave(notesEl.value);
-      showToast("Notes saved");
-    }, 800);
+    notesTimer = setTimeout(save, 800);
   });
+  // Leaving the box saves at once: a reload or a tap on another page within the 800 ms must not lose what was typed.
+  notesEl?.addEventListener("blur", () => { if (notesTimer !== null) { clearTimeout(notesTimer); save(); } });
 }
 
 function _bindPrefsActions(id, court, detailMode) {
@@ -1979,7 +2481,7 @@ function renderPlaceholder() {
   document.getElementById("results").innerHTML = `
     <div class="results-placeholder">
       <div class="big-icon">${icon("balance")}</div>
-      <p>Search for a court to see nearby chambers, or search for a chambers to see all its branches.</p>
+      <p>Search for a court or postcode to see nearby chambers, or search for a chambers to see all its branches.</p>
     </div>`;
   _focusResults();
 }
@@ -2020,21 +2522,21 @@ function renderContactedList() {
       norm.email ? `Emailed ${_formatContactTime(norm.email.ts)}` : "",
     ].filter(Boolean).join(" · ");
     return `
-      <div class="browse-row" data-ch-id="${escapeHtml(chambersId)}"><button type="button" class="browse-row-open">
+      <div class="browse-row" data-ch-id="${escapeHtml(chambersId)}"><a class="browse-row-open" href="${escapeHtml(_linkHref("chambers", chambersId))}">
         <span class="browse-row-content">
           <span class="browse-row-main">
             <span class="browse-row-name">${escapeHtml(name)}</span>
             ${badges}
           </span>
           <span class="browse-row-meta">${escapeHtml(branchCity)}${timeParts ? " · " + escapeHtml(timeParts) : ""}</span>
-        </span></button>
+        </span></a>
         <button type="button" class="search-item-remove" data-clear-contact-key="${escapeHtml(key)}" aria-label="Remove ${escapeHtml(name)} from Contacted">${icon("close")}</button>
       </div>`;
   }).join("");
 
   el.innerHTML = `
     <div class="card card-flush">
-      <div class="browse-header">${icon("call")} Contacted (${entries.length})</div>
+      <div class="browse-header browse-header--bin"><span>Contacted</span><span class="browse-header-mid">${_contactedSummary(entries.map(([key]) => key))}</span>${_headEndHtml("contacted", true)}</div>
       <div class="browse-list">${rows}</div>
     </div>`;
 
@@ -2043,18 +2545,18 @@ function renderContactedList() {
       const ch = state.data?.chambers.find(c => c.id === row.dataset.chId);
       if (ch) {
         if (!getChamberPrefs(ch.id).seen) { setChamberPrefs(ch.id, { seen: Date.now() }); updatePrefsBar(); }
-        state.view = "chamber"; state.selectedChamber = ch; state.fromCourt = null; renderSelection(); syncStatusHighlight();
+        _openChamber(ch);
       }
     };
-    row.addEventListener("click", open);
+    row.addEventListener("click", _onRowClick(open));
   });
+  _bindHeadActions(el);
   el.querySelectorAll("[data-clear-contact-key]").forEach(btn => {
     btn.addEventListener("click", e => {
       e.stopPropagation();
       const current = getContacted();
       delete current[btn.dataset.clearContactKey];
       setContacted(current);
-      updateContactedBar();
       showToast("Removed from Contacted");
       _withKeptFocus(renderContactedList);
       renderStatusStrip();
@@ -2075,11 +2577,11 @@ function renderBrowseChambers(list, heading, emptyIcon = "star", emptyText = "No
     const cp = (getPrefs()[ch.id] || {});
     const badges = [
       cp.starred ? `<span class="badge starred">${icon("star", "icon-fill")} Starred</span>` : "",
-      cp.hidden  ? `<span class="badge hidden-badge">Hidden</span>` : "",
+      cp.hidden  ? `<span class="badge hidden-badge">${icon("visibility_off")} Hidden</span>` : "",
     ].filter(Boolean).join("");
-    const branchList = (ch.branches||[]).map(b => escapeHtml(b.city||b.name)).join(" · ");
+    const branchList = (ch.branches||[]).map(b => escapeHtml(_branchLabel(b))).join(" · ");
     return `
-      <div class="browse-row" data-ch-id="${escapeHtml(ch.id)}"><button type="button" class="browse-row-open"
+      <div class="browse-row" data-ch-id="${escapeHtml(ch.id)}"><a class="browse-row-open" href="${escapeHtml(_linkHref("chambers", ch.id))}"
            title="View ${escapeHtml(ch.name)}">
         <span class="browse-row-content">
           <span class="browse-row-main">
@@ -2090,7 +2592,7 @@ function renderBrowseChambers(list, heading, emptyIcon = "star", emptyText = "No
             ${(ch.branches||[]).length} branch${(ch.branches||[]).length===1?'':'es'}
             ${branchList ? ` · ${branchList}` : ""}
           </span>
-        </span></button>
+        </span></a>
       </div>`;
   }).join("");
   el.innerHTML = `
@@ -2103,10 +2605,10 @@ function renderBrowseChambers(list, heading, emptyIcon = "star", emptyText = "No
       const ch = state.data.chambers.find(c => c.id === row.dataset.chId);
       if (ch) {
         if (!getChamberPrefs(ch.id).seen) { setChamberPrefs(ch.id, { seen: Date.now() }); updatePrefsBar(); }
-        state.view = "chamber"; state.selectedChamber = ch; state.fromCourt = null; renderSelection(); syncStatusHighlight();
+        _openChamber(ch);
       }
     };
-    row.addEventListener("click", open);
+    row.addEventListener("click", _onRowClick(open));
   });
   _focusResults();
 }
@@ -2122,10 +2624,10 @@ function renderBrowseCourts(list, heading) {
     const cp = getCourtPrefs(court.id);
     const badges = [
       cp.starred ? `<span class="badge starred">${icon("star", "icon-fill")} Starred</span>` : "",
-      cp.hidden  ? `<span class="badge hidden-badge">Hidden</span>` : "",
+      cp.hidden  ? `<span class="badge hidden-badge">${icon("visibility_off")} Hidden</span>` : "",
     ].filter(Boolean).join("");
     return `
-    <div class="browse-row" data-court-id="${escapeHtml(court.id)}"><button type="button" class="browse-row-open"
+    <div class="browse-row" data-court-id="${escapeHtml(court.id)}"><a class="browse-row-open" href="${escapeHtml(_linkHref("court", court.id))}"
          title="View ${escapeHtml(court.name)}">
       <span class="browse-row-content">
         <span class="browse-row-main">
@@ -2133,7 +2635,7 @@ function renderBrowseCourts(list, heading) {
           ${badges}
         </span>
         <span class="browse-row-meta">${escapeHtml(court.location||"")}</span>
-      </span></button>
+      </span></a>
     </div>`;
   }).join("");
   el.innerHTML = `
@@ -2144,19 +2646,120 @@ function renderBrowseCourts(list, heading) {
   el.querySelectorAll(".browse-row").forEach(row => {
     const open = () => {
       const court = state.data.courts.find(c => c.id === row.dataset.courtId);
-      if (court) { state.view = "court"; state.selectedCourt = court; renderSelection(); syncStatusHighlight(); }
+      if (court) _openCourt(court);
     };
-    row.addEventListener("click", open);
+    row.addEventListener("click", _onRowClick(open));
   });
   _focusResults();
 }
 
+// ── Bins: clear one kind of saved thing, after a second press ─────────────────────────────────────────────
+// A bin sits at the right of a list's heading: Recent, Contacted, and each section of Starred, Hidden and Noted.
+// The first press arms it ("Clear starred?"); a second press within four seconds clears. Nothing else is touched.
+// The bin names only the list (Clear starred?), never the section: the heading it sits in already says which.
+// Starred, Hidden and Noted are still cleared one section at a time: "starred:courts", "hidden:branches", ...
+const BIN_LABELS = { contacted: "contacted", recents: "recent" };
+function _binLabel(kind) {
+  const what = kind.split(":")[0];
+  return BIN_LABELS[what] || what;
+}
+
+function _binHtml(kind) {
+  const what = _binLabel(kind);
+  return `<button type="button" class="bin-btn" data-bin="${kind}" title="Clear ${what}" aria-label="Clear ${what}">${icon("delete")}<span class="bin-confirm">Clear ${what}?</span></button>`;
+}
+
+function _prefSection(key) {
+  return key.startsWith("court:") ? "courts" : key.startsWith("branch:") ? "branches" : "chambers";
+}
+
+function _clearKind(kind) {
+  const [what, section] = kind.split(":");
+  if (what === "contacted") {
+    localStorage.removeItem(CONTACTED_KEY);
+  } else if (what === "recents") {
+    localStorage.removeItem(RECENT_SEARCHES_KEY);
+    _closeSearchResults();
+  } else {
+    const field = what === "noted" ? "notes" : what;
+    const prefs = getPrefs();
+    Object.keys(prefs).forEach(key => {
+      if (section && _prefSection(key) !== section) return;
+      if (prefs[key] && prefs[key][field]) setChamberPrefs(key, { [field]: field === "notes" ? "" : false });
+    });
+  }
+  updatePrefsBar();
+  if (state.data) renderStatusStrip();
+  if (state.view !== "none") _withKeptFocus(renderSelection);
+  showToast(`Cleared ${_binLabel(kind)}`);
+}
+
+let _armedBin = null;
+function _disarmBin() {
+  if (!_armedBin) return;
+  clearTimeout(_armedBin.timer);
+  _armedBin.btn.classList.remove("armed");
+  _armedBin = null;
+}
+
+function _bindBin(btn) {
+  if (btn.dataset.bound) return; btn.dataset.bound = "1";
+  btn.addEventListener("mousedown", e => e.preventDefault());   // keeps the search box open for the Recent bin
+  btn.addEventListener("keydown", e => e.stopPropagation());   // Enter on the bin is the bin's, not the tile's
+  btn.addEventListener("click", e => {
+    e.stopPropagation();
+    if (_armedBin && _armedBin.btn === btn) { _disarmBin(); _clearKind(btn.dataset.bin); return; }
+    _disarmBin();
+    btn.classList.add("armed");
+    _armedBin = { btn, timer: setTimeout(_disarmBin, 4000) };
+  });
+}
+document.addEventListener("click", e => { if (_armedBin && !_armedBin.btn.contains(e.target)) _disarmBin(); }, true);
+
+// ── Reset: back to the front page with nothing open. Nothing saved is deleted. ──────────────────────────
+function restart() {
+  _disarmBin();
+  navStack.length = 0;
+  farShown.clear();
+  state.view = "none";
+  state.selectedCourt = null;
+  state.selectedChamber = null;
+  state.fromCourt = null;
+  state.showHidden = false;
+  _listFor = { obj: null, open: "chambers", last: "chambers" };
+  _unmountMap();
+  const input = document.getElementById("search-input");
+  if (input) input.value = "";
+  _closeSearchResults();
+  if (location.hash) history.replaceState(null, "", location.pathname + location.search);
+  renderPlaceholder();
+  syncStatusHighlight();
+  updatePrefsBar();
+  const calm = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  window.scrollTo({ top: 0, behavior: calm ? "auto" : "smooth" });
+}
+
+// With a court or postcode showing, the Chambers and Courts tiles are its Chambers and Courts switch: the tile of
+// the open list is the lit one. Anywhere else they open the A to Z lists.
+function _tileListFor(view) {
+  return view === "all-chambers" ? "chambers" : view === "all-courts" ? "courts" : null;
+}
+
 function syncStatusHighlight() {
+  const inCourt = state.view === "court" && state.selectedCourt;
   document.querySelectorAll(".status-block").forEach(b => {
-    const active = b.dataset.view === state.view;
+    const list = _tileListFor(b.dataset.view);
+    const active = inCourt ? Boolean(list) && list === _listFor.open : b.dataset.view === state.view;
+    if (list) {
+      const near = inCourt ? `near ${state.selectedCourt.name.replace(/^Near /, "")}` : "";
+      b.title = list === "chambers"
+        ? (near ? `Click to see the chambers ${near}` : "Click to see every chambers, A to Z")
+        : (near ? `Click to see the courts ${near}` : "Click to see every court, A to Z");
+    }
     b.classList.toggle("active-view", active);
     if (b.dataset.view) b.setAttribute("aria-pressed", String(active));
   });
+  updatePrefsBar();   // also shows or hides Reset beside the travel radius
 }
 
 function renderStatusStrip() {
@@ -2179,10 +2782,10 @@ function renderStatusStrip() {
       </div>`;
 
   document.getElementById("status-strip").innerHTML = `
-    <div class="status-block" data-view="all-chambers" ${interactive} title="Click to browse all chambers">
+    <div class="status-block" data-view="all-chambers" ${interactive} title="Click to see every chambers, A to Z">
       <strong>${visibleChambers.length}</strong><small>chambers</small>
     </div>
-    <div class="status-block" data-view="all-courts" ${interactive} title="Click to browse all courts">
+    <div class="status-block" data-view="all-courts" ${interactive} title="Click to see every court, A to Z">
       <strong>${visibleCourts.length}</strong><small>courts</small>
     </div>
     <div class="status-block noted-block" data-view="noted" ${interactive} title="Click to see everything you've written a note on">
@@ -2196,10 +2799,18 @@ function renderStatusStrip() {
     </div>
     ${hiddenBlock}`;
 
-  document.querySelectorAll(".status-block").forEach(block => {
+  document.querySelectorAll(".status-block[data-view]").forEach(block => {
+    if (block.dataset.bound) return; block.dataset.bound = "1";
     const open = () => {
       const view = block.dataset.view;
       if (!view) return;
+      const list = _tileListFor(view);
+      if (list && state.view === "court" && state.selectedCourt) {
+        _switchList(state.selectedCourt, list);
+        return;
+      }
+      navStack.length = 0;
+      farShown.clear();
 
       if (state.view === view) {
         state.view = "none";
@@ -2209,6 +2820,10 @@ function renderStatusStrip() {
         renderSelection();
       }
       syncStatusHighlight();
+      // A list from a tile: the page goes to the top of that list (on a phone it sits below the tiles), no flash.
+      // Closing it goes back to the top of the page. Left alone, the page kept its old place over the new content.
+      if (state.view === "none") window.scrollTo(0, 0);
+      else _scrollToTop(document.getElementById("results"));
     };
     block.addEventListener("click", open);
     block.addEventListener("keydown", e => {
@@ -2320,29 +2935,18 @@ async function init() {
     if (!e.target.closest(".search-wrap")) _closeSearchResults();
   });
 
-  document.getElementById("save-link-btn").addEventListener("click", openShareModal);
   document.getElementById("share-copy")?.addEventListener("click", copyShareLink);
   SHARE_FIELDS.forEach(k => {
     document.getElementById(`share-${k}`)?.addEventListener("change", _updateShareSize);
   });
-  document.getElementById("clear-prefs-btn").addEventListener("click", () => {
-    if (!confirm("Clear ALL your saved preferences? This cannot be undone.")) return;
+  document.getElementById("restart-btn").addEventListener("click", restart);
+  try { localStorage.removeItem("cf_import_backup"); } catch {}   // Undo link import is gone; drop its old copy
 
-    setPrefs({});
-    localStorage.removeItem(RECENT_SEARCHES_KEY);
-    updatePrefsBar();
-    if (state.data) renderStatusStrip();
-    showToast("All preferences cleared");
-    state.showHidden = false;
-    if (state.view !== "none") renderSelection();
-  });
-
-  document.getElementById("reset-session-btn").addEventListener("click", resetSession);
-  document.getElementById("undo-import-btn")?.addEventListener("click", undoImport);
-  updateUndoImportButton();
+  _bindMapHover();
+  if (window.CFMap && !_mapHidden()) (window.requestIdleCallback || setTimeout)(() => loadMapOutline().catch(() => {}));
 
   setInterval(() => {
-    if (!document.getElementById("prefs-bar").classList.contains("hidden")) updatePrefsBar();
+    if (document.querySelector(".saved-when")) updatePrefsBar();
   }, 60000);
 
   try {
@@ -2371,10 +2975,10 @@ async function init() {
     loadPostcodeTable().catch(() => {});   // starts now so a postcode is instant when it is typed
     renderStatusStrip();
     updatePrefsBar();
-    updateContactedBar();
     await loadFromHash();
+    _openFromLinkHash();
     // A link opened in a tab that is already on this page only changes the address.
-    window.addEventListener("hashchange", loadFromHash);
+    window.addEventListener("hashchange", () => { loadFromHash(); _openFromLinkHash(); });
 
     if (searchInput.value.trim()) doSearch(searchInput.value);
 

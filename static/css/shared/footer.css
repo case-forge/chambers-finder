@@ -54,8 +54,6 @@
 .cf-footer-links a { color: inherit; }
 .cf-footer-links a:hover { color: var(--orange); text-decoration: underline; }
 
-}
-
 /* Touch: the footer links are 16 to 23px tall. An invisible hit area brings them to 40px without moving
    anything (padding grown, margin taken back). */
 @media (hover: none) {

@@ -28,7 +28,7 @@ input, select, textarea, button {
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-ui);
   font-size: var(--fs-body);
   line-height: 1.6;
   min-height: 100vh;
@@ -79,7 +79,7 @@ a:hover { text-decoration: underline; }
 .home-mark { text-decoration: none; }
 .home-mark:hover { text-decoration: none; opacity: 0.8; }
 .home-mark-text {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-ui);
 }
 
 /* The footer is styled by shared/footer.css (.home-footer, .cf-footer-credit,
@@ -99,5 +99,3 @@ a:hover { text-decoration: underline; }
    minimum needed to clear it. */
 :root .radius-btn.active { background: var(--orange-fill); border-color: var(--orange-fill); }
 [data-theme="light"] .radius-btn.active { background: var(--orange-fill); border-color: var(--orange-fill); }
-:root .kofi-btn { color: #f5822f; }
-[data-theme="light"] .kofi-btn { color: var(--orange); }
