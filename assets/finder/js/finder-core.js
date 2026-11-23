@@ -375,12 +375,44 @@
     };
   }
 
+  // ---- Clearing what this device has saved ------------------------------------------------------------------
+  /**
+   * Removes `keys` from a Storage-like object (localStorage, or a stand-in in a test). Returns the keys that held
+   * something. A key the browser refuses to remove is reported in `failed`, so a caller never says "cleared" for a
+   * wipe that did not happen.
+   */
+  function wipeKeys(storage, keys) {
+    const had = [], failed = [];
+    keys.forEach((k) => {
+      try {
+        if (storage.getItem(k) != null) had.push(k);
+        storage.removeItem(k);
+        if (storage.getItem(k) != null) failed.push(k);
+      } catch (e) { failed.push(k); }
+    });
+    return { had, failed };
+  }
+
+  /** What a wipe would throw away, in words: "2 starred, 1 hidden, 3 contacted". "" when there is nothing. */
+  function describeSaved(prefs, contacted, recents) {
+    const list = Object.values(prefs || {});
+    const n = (fn) => list.filter(fn).length;
+    const parts = [];
+    const add = (count, word) => { if (count) parts.push(count + " " + word); };
+    add(n((p) => p.starred), "starred");
+    add(n((p) => p.hidden), "hidden");
+    add(n((p) => p.notes), "with notes");
+    add(Object.keys(contacted || {}).length, "contacted");
+    add((recents || []).length, (recents || []).length === 1 ? "recent search" : "recent searches");
+    return parts.join(", ");
+  }
+
   const api = {
     looksLikePostcode, looksLikeOutcode, parsePostcode, locatePostcode, lookupMessage, NATIONS, OUTSIDE_PLACES,
     normalise, scoreText, matches, scoreCourt, scoreChambers, rankEntries, TIER,
     mergePrefs, mergeContacted, mergeRecents, summariseImport,
     haversine, courtsByDistance, nearestBranchDistance, splitByRadius, rankChambersFromPoint,
-    validateFinderData, validatePostcodeTable,
+    validateFinderData, validatePostcodeTable, wipeKeys, describeSaved,
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.CFCore = api;

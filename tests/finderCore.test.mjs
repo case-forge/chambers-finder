@@ -221,3 +221,46 @@ test('GIR 0AA and BFPO numbers are named as postcodes with no place, not called 
   assert.match(core.lookupMessage('special-bfpo'), /forces post office/);
   assert.equal(core.locatePostcode('hello', table).error, 'invalid', 'other text is still just not a postcode');
 });
+
+// ── Clearing what the device has saved (Reset all, Clear contacted) ──────────────────────────────────────────────
+
+/** A stand-in for localStorage. `stuck` names keys it refuses to remove. */
+function fakeStorage(initial, stuck = []) {
+  const m = new Map(Object.entries(initial));
+  return {
+    getItem: (k) => (m.has(k) ? m.get(k) : null),
+    setItem: (k, v) => { m.set(k, String(v)); },
+    removeItem: (k) => { if (!stuck.includes(k)) m.delete(k); },
+    keys: () => [...m.keys()],
+  };
+}
+
+test('wipeKeys removes every key it is given and says which ones held something', () => {
+  const st = fakeStorage({ cf3_prefs: '{}', cf8_contacted: '{"a||b":{}}', cf9_activity: '{}', other: 'x' });
+  const { had, failed } = core.wipeKeys(st, ['cf3_prefs', 'cf8_contacted', 'cf9_activity', 'cf_recent']);
+  assert.deepEqual(had.sort(), ['cf3_prefs', 'cf8_contacted', 'cf9_activity']);
+  assert.deepEqual(failed, []);
+  assert.deepEqual(st.keys(), ['other'], 'a key that was not asked for is left alone');
+});
+
+test('wipeKeys reports a key the browser would not remove, so "cleared" is never said for a wipe that did not happen', () => {
+  const st = fakeStorage({ cf3_prefs: '{"x":{}}', cf8_contacted: '{}' }, ['cf8_contacted']);
+  const { failed } = core.wipeKeys(st, ['cf3_prefs', 'cf8_contacted']);
+  assert.deepEqual(failed, ['cf8_contacted']);
+  const throwing = { getItem: () => '1', removeItem: () => { throw new Error('denied'); } };
+  assert.deepEqual(core.wipeKeys(throwing, ['cf3_prefs']).failed, ['cf3_prefs'], 'a storage that throws is a failure, not a crash');
+});
+
+test('wipeKeys on an empty storage does nothing and fails nothing', () => {
+  const st = fakeStorage({});
+  assert.deepEqual(core.wipeKeys(st, ['cf3_prefs', 'cf8_contacted']), { had: [], failed: [] });
+});
+
+test('describeSaved says what a reset would throw away, in plain words', () => {
+  const prefs = { a: { starred: true }, b: { starred: true, notes: 'n' }, c: { hidden: true }, d: { seen: true } };
+  const contacted = { 'a||x': {}, 'b||y': {} };
+  assert.equal(core.describeSaved(prefs, contacted, ['stockport']), '2 starred, 1 hidden, 1 with notes, 2 contacted, 1 recent search');
+  assert.equal(core.describeSaved({}, {}, []), '', 'nothing saved, nothing to say');
+  assert.equal(core.describeSaved(null, null, null), '', 'missing stores are nothing, not an error');
+  assert.equal(core.describeSaved({}, {}, ['a', 'b']), '2 recent searches');
+});

@@ -7,55 +7,27 @@
      .results-placeholder's own padding leaves the footer inside a real
      browser window at 1080p, where the browser's own chrome takes part of
      the 1080px. */
-  padding: 36px 44px 28px;
-  margin-bottom: 14px;
+  /* The same space above the title as below the last line: measured to the text, 26px each. */
 }
 
 .hero h1 {
-  font-size: clamp(30px, 5.5vw, var(--fs-tool-title));
-  font-weight: 800;
-  letter-spacing: -0.025em;
-  line-height: 1.08;
   color: var(--text);
-  margin-bottom: 14px;
 }
 
 .hero-sub {
   font-size: var(--fs-label);
   color: var(--text-dim);
   max-width: 560px;
-  margin-bottom: 22px;
-}
-
-.kofi-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 9px 20px;
-  background: var(--orange-soft);
-  color: var(--orange);
-  border: 1px solid var(--accent-border);
-  border-radius: var(--radius-sm);
-  font-size: var(--fs-label);
-  font-weight: 600;
-  text-decoration: none;
-  transition: background 0.15s, border-color 0.15s;
+  margin-bottom: 0;
 }
 
 .btn-sm .ms,
 .pref-toggle-btn .ms,
-.kofi-btn .ms,
 .chamber-back-btn .ms,
 .copy-contact-btn .ms,
 .website-link .ms {
   font-size: 16px;
   flex: 0 0 auto;
-}
-
-.kofi-btn:hover {
-  background: var(--accent-strong);
-  border-color: var(--orange);
-  text-decoration: none;
 }
 
 .toolbar-card {
@@ -111,7 +83,6 @@
   padding: 6px;
   line-height: 1;
   font-size: 18px;
-  border-radius: 50%;
   transition: opacity 0.14s, color 0.14s;
 }
 .search-clear-btn:hover { opacity: 1; color: var(--orange); }
@@ -132,11 +103,11 @@
   overflow-y: auto;
 }
 
-[data-theme="dark"] .search-group-label { color: #f5822f; }   /* #e8610c on the tinted label is 4.46:1 */
+[data-theme="dark"] .search-group-label { color: var(--orange-bright); }   /* #ff6900 on the tinted label is 4.46:1 */
 .search-group-label {
   padding: 8px 14px 6px;
   font-size: var(--fs-micro);
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.09em;
   text-transform: uppercase;
   color: var(--orange);
@@ -194,10 +165,9 @@
   line-height: 1;
   font-size: 16px;
   flex-shrink: 0;
-  border-radius: 50%;
-  transition: opacity 0.14s, background 0.14s, color 0.14s;
+  transition: opacity 0.14s, color 0.14s;
 }
-.search-item-remove:hover { opacity: 1; background: var(--surface); color: var(--red); }
+.search-item-remove:hover { opacity: 1; color: var(--danger-ink); }
 
 .toolbar-row {
   display: flex;
@@ -223,30 +193,33 @@
 }
 
 .radius-btn {
-  padding: 5px 14px;
+  padding: 5px 10px;
   background: var(--surface);
   color: var(--text-dim);
   border: 1px solid var(--border-mid);
-  border-radius: 20px;
+  border-radius: var(--radius-sm);
   font-size: var(--fs-label);
-  font-weight: 500;
+  font-weight: 400;
   cursor: pointer;
   transition: background 0.14s, border-color 0.14s, color 0.14s;
 }
 
 .radius-btn:hover { border-color: var(--orange); color: var(--text); }
 
+/* Reset: a button like Share, pushed to the right of the radius row; on a narrow page it wraps under the pills and
+   stays on the right. */
+
 .radius-btn.active {
   background: var(--orange-fill);
-  color: #fff;
+  color: var(--on-fill);
   border-color: var(--orange-fill);
   font-weight: 600;
 }
 
 #load-error {
   display: none;
-  background: rgba(192, 53, 53, 0.12);
-  border: 1px solid rgba(192, 53, 53, 0.3);
+  background: var(--tint-red-12);
+  border: 1px solid var(--tint-red-30);
   border-radius: var(--radius-sm);
   padding: 14px 18px;
   color: var(--text);
@@ -256,30 +229,12 @@
 }
 
 #load-error code {
-  background: rgba(128, 128, 128, 0.10);
+  background: var(--tint-ink-10);
   padding: 1px 5px;
-  border-radius: 4px;
+  border-radius: var(--radius-pill);
   font-size: var(--fs-label);
 }
-
-#prefs-bar {
-  background: var(--card);
-  border: 1px solid var(--border-mid);
-  border-radius: var(--radius-sm);
-  padding: 12px 16px;
-  margin-bottom: 12px;
-  font-size: var(--fs-label);
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-#prefs-bar.hidden { display: none; }
-
-.prefs-bar-info { color: var(--muted); flex: 1; min-width: 120px; }
-.prefs-bar-info strong { color: var(--text); }
-.prefs-bar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+[data-theme="dark"] #load-error { background: var(--tint-rose-12); border-color: var(--tint-rose-70); }
 
 .btn-sm {
   display: inline-flex;
@@ -291,7 +246,7 @@
   border: 1px solid var(--border-mid);
   border-radius: var(--radius-sm);
   font-size: var(--fs-label);
-  font-weight: 500;
+  font-weight: 400;
   cursor: pointer;
   transition: color 0.14s, border-color 0.14s;
 }
@@ -299,18 +254,25 @@
 .btn-sm:hover { color: var(--text); border-color: var(--orange); }
 .btn-sm.danger { color: var(--danger-ink); }
 .btn-sm.danger:hover { border-color: var(--danger-ink); color: var(--danger-ink); }
+/* A destructive button that has been pressed once and is waiting for the second press (see _twoClick in app.js):
+   filled with the destructive ink so it cannot be mistaken for its resting self, and allowed to wrap, since the
+   question names what would be lost. */
+.btn-sm.danger.armed { background: var(--danger-ink); border-color: var(--danger-ink); color: var(--bg); white-space: normal; text-align: left; max-width: 100%; }
+/* Reset is a button like the rest: .btn-sm's rounded rectangle. */
+.reset-btn { margin-left: auto; }
+.reset-btn.hidden { display: none; }
 
 #status-strip {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-  gap: 10px;
-  margin-bottom: 18px;
+  gap: 12px;
+  margin-bottom: 12px;
 }
 
 .status-block {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 16px 12px 14px;
+  padding: 18px 2px 12px;   /* measured to the text: 17px above the number, 17px below the caption */
   text-align: center;
   display: flex;
   flex-direction: column;
@@ -328,12 +290,12 @@
   background: var(--orange-soft);
 }
 .status-block.starred-block strong { color: var(--amber); }
-.status-block.hidden-block  strong { color: var(--red); }
+.status-block.hidden-block  strong { color: var(--danger-ink); }
 .status-block.noted-block   strong { color: var(--muted); }
 
 .status-block strong {
   font-size: 24px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--orange);
   line-height: 1;
 }
@@ -344,8 +306,11 @@
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
+.status-block.contacted-block strong { color: var(--green); }
+.status-block:not([data-view]) { cursor: default; }
 
-#results { margin-bottom: 24px; }
+#results { margin-bottom: 24px; overflow-anchor: none; }
+#results > .results-placeholder { margin-block: auto; }
 
 .results-placeholder {
   text-align: center;
@@ -356,6 +321,8 @@
   padding: 12px 20px;
   color: var(--text-dim);
 }
+.results-placeholder .big-icon { font-size: 44px; margin-bottom: 8px; }
+.results-placeholder p { font-size: var(--fs-label); max-width: 380px; margin: 0 auto; }
 
 /* While an empty block is showing, the page's main area grows to fill the window and the
    block centres itself in whatever height is left between the stats and the footer. Lists
@@ -371,10 +338,6 @@
   flex-direction: column;
   margin-bottom: 0;
 }
-#results > .results-placeholder { margin-block: auto; }
-
-.results-placeholder .big-icon { font-size: 44px; margin-bottom: 8px; }
-.results-placeholder p { font-size: var(--fs-label); max-width: 380px; margin: 0 auto; }
 
 .court-header {
   background: var(--card);
@@ -386,7 +349,7 @@
 
 .court-header h2 {
   font-size: var(--fs-large);
-  font-weight: 700;
+  font-weight: 600;
   margin-bottom: 5px;
 }
 
@@ -400,6 +363,9 @@
   font-size: var(--fs-label);
   color: var(--muted);
 }
+.court-header .notes-section { margin-top: 14px; }
+/* Above a court's name, lined up with its text rather than indented by the button's padding. */
+.court-header > .chamber-back-btn { margin: 0 0 6px -10px; }
 
 .court-actions-row {
   display: flex;
@@ -407,8 +373,6 @@
   flex-wrap: wrap;
   margin-top: 14px;
 }
-
-.court-header .notes-section { margin-top: 14px; }
 
 .chambers-list {
   background: var(--card);
@@ -424,7 +388,7 @@
 .chambers-item {
   display: flex;
   align-items: center;
-  padding: 14px 20px;
+  padding: 11px 20px 14px;   /* the name sits 4px inside its line box, so the top is 3px less: equal to the eye */
   border-bottom: 1px solid var(--border);
   gap: 12px;
   cursor: pointer;
@@ -433,9 +397,19 @@
 }
 
 .chambers-item:last-child { border-bottom: none; }
-.chambers-item:hover { background: rgba(128, 128, 128, 0.08); }
+/* The same highlight as a court row (.browse-row), so the Chambers and Courts lists answer the pointer alike. */
+.chambers-item:hover, .chambers-item:focus-within { background: var(--accent-bg-mid); }
 .chambers-item.hidden-item { opacity: 0.42; }
 .chambers-item.hidden-item:hover { opacity: 0.68; }
+/* A row you have already opened is shown quieter by its ground and by less colour, not by
+   opacity: fading the whole row would take its text below 4.5:1 (3.1:1 in light mode). */
+.chambers-item.seen-item {
+  background: var(--tint-night-08);
+  filter: grayscale(0.5);
+}
+[data-theme="light"] .chambers-item.seen-item {
+  background: var(--tint-night-04);
+}
 
 .chambers-item-main { flex: 1; min-width: 0; }
 
@@ -475,9 +449,9 @@
   padding: 9px 20px;
   font-size: var(--fs-micro);
   color: var(--muted);
-  border-top: 1px dashed var(--border-mid);
+  /* No top line: the row above already ends in one, and two would draw a 2px line. */
   border-bottom: 1px solid var(--border);
-  background: rgba(128, 128, 128, 0.04);
+  background: var(--tint-ink-04);
 }
 
 .empty-msg {
@@ -487,14 +461,20 @@
   font-size: var(--fs-label);
 }
 
+/* Every pill is the same size: 22px tall, the icon 12px, the text centred on it, whatever icon or word it carries. */
 .badge {
-  display: inline-block;
-  padding: 3px 9px;
-  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  box-sizing: border-box;
+  height: 22px;
+  line-height: 1;
+  padding: 0 9px;
+  border-radius: var(--radius-pill);
   font-size: var(--fs-micro);
   font-weight: 600;
   background: var(--surface);
-  color: var(--text-dim);
+  color: var(--muted);
   border: 1px solid var(--border-mid);
   white-space: nowrap;
   flex-shrink: 0;
@@ -503,23 +483,23 @@
 .badge.orange {
   background: var(--orange-soft);
   color: var(--orange);
-  border-color: var(--accent-border);
+  border-color: color-mix(in srgb, var(--orange) 70%, transparent);
 }
-/* #e8610c on the tinted badge is 4.47:1 (4.06:1 on starred rows); this lighter orange is above 5:1. */
-[data-theme="dark"] .badge.orange { color: #f5822f; }
+/* #ff6900 on the tinted badge is 4.47:1 (4.06:1 on starred rows); this lighter orange is above 5:1. */
+[data-theme="dark"] .badge.orange { color: var(--orange-bright); }
 
 .badge.starred {
-  background: rgba(212, 146, 10, 0.14);
+  background: var(--tint-amber-14);
   color: var(--amber);
-  border-color: rgba(212, 146, 10, 0.32);
+  border-color: var(--tint-amber-70);
 }
-/* The light-mode amber is 3.9:1 on this tint at 12.5px, under the 4.5 floor. */
-[data-theme="light"] .badge.starred { color: #7a5200; }
+/* The light-mode amber is 3.9:1 on this tint at 13px, under the 4.5 floor. */
+[data-theme="light"] .badge.starred { color: var(--amber-deep); }
 
 .star-btn {
   background: none;
   border: none;
-  font-size: 19px;
+  font-size: var(--fs-heading);
   cursor: pointer;
   padding: 2px 3px;
   line-height: 1;
@@ -533,9 +513,9 @@
 .star-btn.starred { opacity: 1; color: var(--amber); }
 
 .badge.contacted {
-  background: rgba(43, 168, 112, 0.14);
+  background: var(--tint-green-14);
   color: var(--green);
-  border-color: rgba(43, 168, 112, 0.3);
+  border-color: var(--tint-green-70);
 }
 
 .branch-contacted-mark {
@@ -547,26 +527,6 @@
   font-weight: 600;
   margin-top: 6px;
 }
-
-#contacted-bar {
-  background: var(--card);
-  border: 1px solid var(--border-mid);
-  border-radius: var(--radius-sm);
-  padding: 12px 16px;
-  margin-bottom: 12px;
-  font-size: var(--fs-label);
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-#contacted-bar.hidden { display: none; }
-
-.contacted-bar-info { color: var(--muted); flex: 1; min-width: 120px; }
-.contacted-bar-info strong { color: var(--green); }
-
-.status-block.contacted-block strong { color: var(--green); }
 
 .chamber-detail-wrap {
   border-radius: var(--radius);
@@ -588,14 +548,14 @@
 
 .chamber-detail-header h3 {
   font-size: var(--fs-heading);
-  font-weight: 700;
+  font-weight: 600;
   flex: 1;
   min-width: 0;
 }
 
 .chamber-back-btn {
   display: inline-flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 6px;
   background: none;
   border: none;
@@ -603,10 +563,11 @@
   font-size: var(--fs-label);
   cursor: pointer;
   padding: 5px 10px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   transition: color 0.14s;
-  flex-shrink: 0;
-  white-space: nowrap;
+  min-width: 0;
+  max-width: 100%;
+  text-align: left;   /* a long court name wraps under the arrow instead of running off the card */
 }
 
 .chamber-back-btn:hover { color: var(--orange); }
@@ -616,7 +577,9 @@
   border-bottom: 1px solid var(--border);
 }
 
-.branch-item:last-child { border-bottom: none; }
+.branch-item:last-child { border-bottom: none; padding-bottom: 21px; }
+.branch-item.hidden-item { opacity: 0.5; }
+.branch-item.hidden-item:hover { opacity: 0.75; }   /* as far below the last row as the title is below the top */
 
 .branch-item-header {
   display: flex;
@@ -628,8 +591,12 @@
 
 .branch-city {
   font-size: var(--fs-body);
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .branch-address {
@@ -661,7 +628,7 @@
   background: var(--surface);
   color: var(--text-dim);
   font-size: var(--fs-label);
-  font-weight: 700;
+  font-weight: 400;  /* Inter Tight ships 400 and 600 only; a 700 here was drawn heavier than its neighbours */
   line-height: 1.25;
   cursor: pointer;
   text-decoration: none;
@@ -669,11 +636,6 @@
   max-width: 100%;
   text-align: left;
 }
-
-.contact-value {
-  overflow-wrap: anywhere;
-}
-
 .copy-contact-btn:hover,
 .website-link:hover {
   border-color: var(--orange);
@@ -681,11 +643,14 @@
   background: var(--orange-soft);
   text-decoration: none;
 }
-
 .copy-contact-btn.compact {
   min-height: 25px;
   padding: 4px 8px;
   font-size: var(--fs-micro);
+}
+
+.contact-value {
+  overflow-wrap: anywhere;
 }
 
 .chamber-prefs-header {
@@ -705,11 +670,6 @@
   align-items: center;
   gap: 2px;
 }
-
-.branch-item.hidden-item { opacity: 0.5; }
-.branch-item.hidden-item:hover { opacity: 0.75; }
-
-.eye-btn.on-hide { color: var(--red); opacity: 0.95; }
 
 body.drag-active { outline: 2px dashed var(--orange); outline-offset: -8px; }
 
@@ -741,14 +701,14 @@ body.drag-active { outline: 2px dashed var(--orange); outline-offset: -8px; }
   border: 1px solid var(--border-mid);
   border-radius: var(--radius-sm);
   font-size: var(--fs-label);
-  font-weight: 500;
+  font-weight: 400;
   cursor: pointer;
   transition: all 0.14s;
 }
 
 .pref-toggle-btn:hover { color: var(--text); border-color: var(--border-mid); }
-.pref-toggle-btn.on-star { color: var(--amber); border-color: rgba(212,146,10,0.42); background: rgba(212,146,10,0.10); }
-.pref-toggle-btn.on-hide { color: var(--red); border-color: rgba(192,53,53,0.42); background: rgba(192,53,53,0.10); }
+.pref-toggle-btn.on-star { color: var(--amber); border-color: var(--tint-amber-42); background: var(--tint-amber-10); }
+.pref-toggle-btn.on-hide { color: var(--danger-ink); border-color: var(--tint-red-42); background: var(--tint-red-10); }
 
 .notes-section { margin-top: 2px; }
 
@@ -793,9 +753,16 @@ body.drag-active { outline: 2px dashed var(--orange); outline-offset: -8px; }
   color: var(--text);
   border: 1px solid var(--border-mid);
   border-radius: var(--radius-sm);
-  padding: 10px 22px;
+  padding: 10px 18px;
   font-size: var(--fs-caption);
-  font-weight: 500;
+  font-weight: 400;
+  /* Fits a phone: never wider than the screen less a 16px gutter each side, wrapping and centred if it must. */
+  box-sizing: border-box;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  white-space: normal;
+  text-align: center;
+  line-height: 1.35;
   box-shadow: var(--shadow);
   opacity: 0;
   pointer-events: none;
@@ -815,23 +782,32 @@ body.drag-active { outline: 2px dashed var(--orange); outline-offset: -8px; }
 .browse-header {
   padding: 14px 18px 10px;
   font-size: var(--fs-micro);
-  font-weight: 700;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--orange);
   border-bottom: 1px solid var(--border);
 }
 .browse-header .ms { font-size: 15px; vertical-align: -0.18em; margin-right: 3px; }
-/* A header that sits on its own on the page background (the postcode search's
-   "Courts near" and "Chambers near"), not inside a .card. The card title bar's
-   look is the page colour, so it would disappear into the background; a
-   tinted fill and a border make it read as its own bar. */
 .browse-header--standalone {
-  margin: 18px 0 8px;
+  margin: 12px 0;
   padding: 10px 18px;
   background: var(--accent-bg-mid);
   border: 1px solid var(--accent-border);
   border-radius: var(--radius-sm);
+}
+/* A heading with a middle (Contacted): three columns, so the middle sits at the card's true centre, under the gap
+   between the Noted and Starred tiles, however long the words either side of it. */
+.browse-header--bin:has(.browse-header-mid) { display: grid; grid-template-columns: 1fr auto 1fr; }
+.browse-header--bin:has(.browse-header-mid) .head-actions { grid-column: 3; justify-self: end; }
+/* A header that sits on its own on the page background (the postcode search's
+   "Courts near" and "Chambers near"), not inside a .card. The card title bar's
+   look is the page colour, so it would disappear into the background; a
+   tinted fill and a border make it read as its own bar. */
+.show-more-row {
+  padding: 12px 18px;
+  text-align: center;
+  /* No top line: the last row above already ends in one. */
 }
 
 .browse-list { display: flex; flex-direction: column; }
@@ -848,6 +824,10 @@ body.drag-active { outline: 2px dashed var(--orange); outline-offset: -8px; }
 }
 .browse-row:last-child { border-bottom: none; }
 .browse-row:hover, .browse-row:focus-visible { background: var(--accent-bg-mid); }
+.browse-row:focus-within { background: var(--accent-bg-mid); }
+/* A court or chambers beyond the travel radius, listed after the ones inside it. */
+.browse-row--far { opacity: 0.62; }
+.browse-row--far:hover, .browse-row--far:focus-within { opacity: 1; }
 .browse-row-content { min-width: 0; flex: 1; }
 .browse-row-main {
   display: flex;
@@ -859,52 +839,35 @@ body.drag-active { outline: 2px dashed var(--orange); outline-offset: -8px; }
 .browse-row-meta { color: var(--muted); font-size: var(--fs-caption); margin-top: 2px; }
 
 @media (max-width: 600px) {
-  .hero { padding: 36px 20px 30px; }
+  .branch-item:last-child { padding-bottom: 15px; }   /* wrapped contact chips add their own space */
   #status-strip { grid-template-columns: repeat(2, 1fr); }
-  .toolbar-row { flex-direction: column; align-items: flex-start; gap: 8px; }
   .chamber-detail-header { flex-direction: column; align-items: flex-start; }
   .chambers-item { align-items: flex-start; flex-direction: column; }
   .chambers-item-actions { width: 100%; justify-content: flex-start; }
 }
 
-/* A row you have already opened is shown quieter by its ground and by less colour, not by
-   opacity: fading the whole row would take its text below 4.5:1 (3.1:1 in light mode). */
-.chambers-item.seen-item {
-  background: rgba(0, 0, 0, 0.08);
-  filter: grayscale(0.5);
-}
-[data-theme="light"] .chambers-item.seen-item {
-  background: rgba(0, 0, 0, 0.04);
-}
 .eye-btn {
   background: none;
   border: none;
-  font-size: 16px;
+  font-size: var(--fs-heading);                /* the star's size, so the two read as a pair */
   cursor: pointer;
-  padding: 0 4px;
+  padding: 2px 3px;
   line-height: 1;
   color: var(--text-dim);
   opacity: 0.4;
-  transition: opacity 0.14s, color 0.14s;
+  transition: opacity 0.14s, transform 0.12s, color 0.14s;
 }
-.eye-btn:hover { opacity: 0.85; color: var(--orange); }
+.eye-btn:hover { opacity: 0.75; transform: scale(1.18); }          /* grey like the star: it stays grey until pressed */
+.eye-btn.on-hide, .eye-btn.on-hide:hover { opacity: 1; color: var(--danger-ink); }
 .eye-btn.seen { opacity: 0.9; color: var(--orange); }
 
-.badge.emailed {
-  background: rgba(64, 128, 204, 0.14);
-  color: #4080cc;
-  border-color: rgba(64, 128, 204, 0.3);
-}
-
 .badge.hidden-badge {
-  background: rgba(192, 53, 53, 0.1);
-  color: var(--red);
-  border-color: rgba(192, 53, 53, 0.35);
+  background: var(--tint-red-10);
+  color: var(--danger-ink);
+  border-color: var(--tint-red-70);
 }
-[data-theme="light"] .badge.emailed {
-  background: rgba(26, 79, 140, 0.08);
-  color: #1a4f8c;
-}
+/* Dark: the red tints draw their edge in the text red. Red-700 at 35% was 1.2:1 against the dark card, so the outline all but vanished. */
+[data-theme="dark"] .badge.hidden-badge { background: var(--tint-rose-12); border-color: var(--tint-rose-70); }
 
 /* The return-to-top button is the shared #cf-ascend
    (layouts/partials/back-to-top.html, static/js/shared/back-to-top.js);
@@ -935,16 +898,17 @@ body.drag-active { outline: 2px dashed var(--orange); outline-offset: -8px; }
 }
 #share-modal::backdrop,
 #import-modal::backdrop {
-  background: rgba(0, 0, 0, 0.45);
+  background: var(--tint-night-45);
   backdrop-filter: blur(2px);
 }
-.share-form { padding: 20px 22px 18px; }
 #share-modal h2,
 #import-modal h2 {
   margin: 0 0 8px;
   font-size: var(--fs-heading);
-  font-weight: 700;
+  font-weight: 600;
 }
+.share-form { padding: 20px 22px 18px; }
+
 .share-intro {
   margin: 0 0 14px;
   font-size: var(--fs-label);
@@ -954,7 +918,7 @@ body.drag-active { outline: 2px dashed var(--orange); outline-offset: -8px; }
 .share-intro code {
   font-size: 0.95em;
   padding: 0 3px;
-  border-radius: 3px;
+  border-radius: var(--radius-pill);
   color: var(--text);   /* muted on this 8% tint was 4.3:1 in dark */
   background: color-mix(in srgb, var(--text) 8%, var(--card));
 }
@@ -992,7 +956,6 @@ body.drag-active { outline: 2px dashed var(--orange); outline-offset: -8px; }
    would reshuffle the list between openings and hide what a link can carry. */
 .share-empty label { cursor: default; opacity: 0.55; }
 
-
 .share-actions {
   display: flex;
   justify-content: flex-end;
@@ -1017,7 +980,7 @@ body.drag-active { outline: 2px dashed var(--orange); outline-offset: -8px; }
 .share-preview {
   padding: 14px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   text-align: center;
 }
 #share-code-canvas { min-height: 132px; }
@@ -1043,7 +1006,7 @@ body.drag-active { outline: 2px dashed var(--orange); outline-offset: -8px; }
   color: var(--text);
   background: color-mix(in srgb, var(--text) 5%, var(--card));
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
 }
 
 @media (max-width: 480px) {
@@ -1054,13 +1017,24 @@ body.drag-active { outline: 2px dashed var(--orange); outline-offset: -8px; }
 /* Cards whose list runs edge to edge. Classes, not inline style attributes in the results markup,
    which the page's Content-Security-Policy (style-src 'self') blocks. */
 .card-flush { padding: 0; overflow: hidden; }
-.card-flush-gap { margin-bottom: 14px; }
+.card-flush-gap { margin-bottom: 12px; }
 .text-muted { color: var(--muted); }
 
 /* Radius chips: on a phone the label takes its own line so 20, 35 and 50 mi stay on one row, and each
    chip's touch area is extended to about 40px without changing how it looks. */
 @media (max-width: 480px) {
   .radius-group > .radius-label { flex-basis: 100%; }
+  /* The group's box steps aside, so the label, the pills and Reset share one wrapping row: it stays on the
+     miles line and moves down only when there is no room. */
+  .radius-group { display: contents; }
+  .toolbar-row { gap: 7px; }
+}
+/* On the narrowest phones the pills lose a little padding so Reset still fits beside 50 mi. */
+@media (max-width: 400px) {
+  .radius-btn { padding: 5px 8px; }
+  .toolbar-row { gap: 6px; }
+  /* Star chambers and Hide chambers side by side on a small phone. */
+  .pref-toggle-btn { padding: 7px 9px; }
 }
 @media (pointer: coarse) {
   .radius-btn { position: relative; }
@@ -1068,13 +1042,15 @@ body.drag-active { outline: 2px dashed var(--orange); outline-offset: -8px; }
 }
 
 /* ── Rows whose main action is a real button ──────────────────────────────
-   The name of a chambers or court is a <button>; the star, hide and copy
-   controls are its siblings, never inside it (nested controls confuse
-   keyboards and screen readers). The button is drawn as plain text, laid
-   out as a block. */
+   The name of a chambers or court is a link (#chambers=ID, #court=ID), so a
+   middle click or Ctrl/Cmd-click opens it in a new tab; the star, hide and
+   copy controls are its siblings, never inside it (nested controls confuse
+   keyboards and screen readers). The link is drawn as plain text, laid out
+   as a block. */
 .chambers-item-open,
 .browse-row-open {
   display: block;
+  text-decoration: none;
   min-width: 0;
   padding: 0;
   border: 0;
@@ -1085,29 +1061,33 @@ body.drag-active { outline: 2px dashed var(--orange); outline-offset: -8px; }
   cursor: pointer;
 }
 .chambers-item-open { width: 100%; }
-.browse-row-open { flex: 1; }
 .chambers-item-open .chambers-item-name,
-.chambers-item-open .chambers-item-meta,
 .browse-row-open .browse-row-content,
 .browse-row-open .browse-row-meta { display: block; }
 .chambers-item-open .chambers-item-meta { display: flex; }
-.browse-row-open .browse-row-main { display: flex; }
 .chambers-item-open:focus-visible,
 .browse-row-open:focus-visible {
   outline: 2px solid var(--orange);
   outline-offset: 3px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
-.browse-row:focus-within { background: var(--accent-bg-mid); }
+.browse-row-open { flex: 1; }
+
+.browse-row-open .browse-row-main { display: flex; }
 
 /* Recent searches: an option and its little cross side by side. */
 .search-item-recent {
   display: flex;
   align-items: center;
   border-bottom: 1px solid var(--border);
+  transition: background 0.1s;
 }
 .search-item-recent:last-child { border-bottom: none; }
 .search-item-recent .search-item { flex: 1; border-bottom: none; min-width: 0; }
+/* The highlight belongs to the whole row, so it runs on under the little cross instead of stopping short of it. */
+
+.search-item-recent:hover, .search-item-recent:has(.search-item:focus, .search-item.active) { background: var(--orange-soft); }
+.search-item-recent .search-item:hover, .search-item-recent .search-item:focus, .search-item-recent .search-item.active { background: none; }
 .search-item-recent .search-item-remove { margin-right: 10px; }
 
 /* A postcode that could not be looked up. */
@@ -1133,20 +1113,158 @@ body.drag-active { outline: 2px dashed var(--orange); outline-offset: -8px; }
   }
   .search-item-remove { min-width: 40px; min-height: 40px; }
   .chambers-item-open, .browse-row-open { min-height: 40px; }
-  .copy-contact-btn, .copy-contact-btn.compact, .website-link { min-height: 40px; }
+  /* The chips keep their slim look; an invisible edge takes the touch target to 40px without making them taller. */
+  .copy-contact-btn, .copy-contact-btn.compact, .website-link { min-height: 32px; padding-top: 4px; padding-bottom: 4px; position: relative; }
+  .copy-contact-btn::after, .website-link::after { content: ""; position: absolute; inset: -4px 0; }
 }
 
 /* Light mode: the amber of the "Starred" toggle is 4.09:1 on its tint. */
-[data-theme="light"] .pref-toggle-btn.on-star { color: #7a5200; }
-
-/* A court or chambers beyond the travel radius, listed after the ones inside it. */
-.browse-row--far { opacity: 0.62; }
-.browse-row--far:hover, .browse-row--far:focus-within { opacity: 1; }
+[data-theme="light"] .pref-toggle-btn.on-star { color: var(--amber-deep); }
 
 /* Chambers or Courts, above the list for a postcode search. */
-.pc-mode { display: flex; gap: 8px; margin-top: 10px; }
 
 /* The postcode data credit the licences require, under the results. */
+
+[data-theme="dark"] .pref-toggle-btn.on-hide { background: var(--tint-rose-10); border-color: var(--tint-rose-70); }
+
+/* ── The map ─────────────────────────────────────────────────────────────────────────────────────────
+   A card like the others. The map fills its top and a row ends it with one centred button, the way a list card ends in
+   "Show more". Every colour is a page token (the CaseForge palette): the sea is the surface tier and the land the card
+   tier, the start of the search is the accent, the place under the pointer is the danger red, and a called or emailed
+   place has the colour of its badge. Stuck to the top of the window while the list scrolls past, when the window is
+   tall enough to leave room for the list. The pins are drawn by finder-map.js. */
+.map-card {
+  position: relative;
+  margin-bottom: 12px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--card);
+  box-shadow: var(--box-lift);
+}
+@media (min-width: 700px) and (min-height: 760px) { .map-card { position: sticky; top: 8px; z-index: 6; } }
+.map-view { position: relative; height: 320px; background: var(--surface); }
+@media (max-width: 600px) { .map-view { height: 240px; } }
+/* Map hidden: the Show more row turned upside down. It is the top row of the court's card, the button centred and the
+   line under it instead of over it, reaching the card's edges whatever its padding. */
+.map-show-row { margin: -20px -24px 16px; padding: 12px 18px 11px; text-align: center; border-bottom: 1px solid var(--border); }
+/* "Show map" above a chambers' page, when its map is hidden: the button alone, not the top row of a card. */
+.map-show-row--alone { margin: 0 0 10px; padding: 0; text-align: center; border-bottom: 0; }
+.fmap-svg { display: block; width: 100%; height: 100%; cursor: grab; user-select: none; touch-action: pan-y; }
+.fmap.dragging .fmap-svg { cursor: grabbing; }
+.fmap-sea { fill: transparent; }
+.fmap-land { fill: var(--card); stroke: var(--border-mid); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.fmap-borders { fill: none; stroke: var(--border-mid); stroke-width: 0.75; vector-effect: non-scaling-stroke; opacity: 0.8; }
+.fmap-ring { fill: color-mix(in srgb, var(--orange) 6%, transparent); stroke: var(--orange); stroke-width: 1; opacity: 0.6; vector-effect: non-scaling-stroke; pointer-events: none; }
+.fmap-pin { cursor: pointer; }
+.fmap-pin .body { fill: var(--muted); stroke: var(--card); stroke-width: 1.5; }
+.fmap-pin.dim { opacity: 0.55; }
+.fmap-pin.contacted .body { fill: var(--green); }
+.fmap-pin.starred .body { fill: var(--amber); }
+.fmap-pin.hidden .body { fill: var(--danger-ink); }
+.fmap-pin.hot { opacity: 1; }
+.fmap-pin.hot .body { stroke: var(--text); stroke-width: 2; }
+.fmap-pin.fanned .body { stroke-width: 2; }
+.fmap-hit { fill: transparent; stroke: none; }
+
+.fmap-cluster circle { fill: var(--muted); stroke: var(--card); stroke-width: 1.5; cursor: pointer; opacity: 0.92; }
+.fmap-cluster.contacted circle { stroke: var(--green); stroke-width: 3.5; }
+.fmap-cluster:focus-visible, .fmap-fan-badge:focus-visible, .fmap-pin.fanned:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
+.fmap-fan-lines line { stroke: var(--border-mid); stroke-width: 1; pointer-events: none; }
+/* The number stays in the middle of a fan; pressing it folds the fan up. */
+.fmap-fan-badge { cursor: pointer; }
+.fmap-fan-badge circle { fill: var(--muted); stroke: var(--card); stroke-width: 1.5; }
+.fmap-fan-badge text { fill: var(--card); font-size: 10px; font-weight: 600; pointer-events: none; }
+
+.fmap-cluster text { fill: var(--card); font-size: 10px; font-weight: 600; pointer-events: none; }
+.fmap-start .halo { fill: color-mix(in srgb, var(--orange) 16%, transparent); stroke: var(--orange); stroke-width: 2; pointer-events: none; }
+.fmap-start .dot { fill: var(--orange); pointer-events: none; }
+.fmap-start .fmap-label { fill: var(--orange); }
+.fmap-label { font-size: 11px; font-weight: 600; fill: var(--text); paint-order: stroke; stroke: var(--card); stroke-width: 3px; stroke-linejoin: round; pointer-events: none; }
+.fmap-controls { position: absolute; top: 8px; right: 8px; display: flex; gap: 4px; }
+.fmap-controls button {
+  min-width: 28px; height: 28px; padding: 0 8px; border: 0; border-radius: var(--radius-sm);
+  background: var(--card); color: var(--text-dim); font: inherit; font-size: var(--fs-label); font-weight: 600;
+  cursor: pointer; box-shadow: var(--shadow-sm);
+}
+.fmap-controls button:hover { color: var(--orange); }
+.fmap-controls button:focus-visible { outline: 2px solid var(--orange); outline-offset: 1px; }
+.fmap-key { position: absolute; left: 8px; top: 8px; max-width: calc(100% - 200px); display: flex; flex-wrap: wrap; gap: 2px 10px; font-size: 10px; font-weight: 600; color: var(--text-dim); pointer-events: none; }
+.fmap-key span::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 4px; border-radius: 50%; vertical-align: -0.5px; }
+.fmap-key .contacted::before { background: var(--green); }
+.fmap-key .starred::before { background: var(--amber); }
+.fmap-key .hidden::before { background: var(--danger-ink); }
+.fmap-key .shape-court::before { background: var(--muted); border-radius: 1.5px; }
+.fmap-attrib {
+  position: absolute; left: 6px; bottom: 5px; max-width: calc(100% - 12px);
+  padding: 1px 6px; border-radius: var(--radius-pill); font-size: 9px; line-height: 1.3; color: var(--muted);
+  background: color-mix(in srgb, var(--card) 80%, transparent); pointer-events: none;
+}
+.map-linked { background: var(--accent-bg-mid); }
+
+/* Chambers and Courts in a court's header (an accordion: one list open at a time) carry their count. */
+/* Pressing a list's own button lights its box for a moment, so the eye finds where it landed. A tint, never an outline
+   (the paper look draws no line round a box). */
+@keyframes list-flash { 0%, 55% { background: var(--accent-bg-mid); } 100% { background: transparent; } }
+.list-flash { animation: list-flash 1.4s ease-out; border-radius: var(--radius); }
+@media (prefers-reduced-motion: reduce) { .list-flash { animation: none; background: var(--accent-bg-mid); } }
+
+/* Bins (app.js _binHtml): at the right of a list's heading (Recent, Contacted, and each Starred, Hidden and Noted
+   section). Just the bin; pressed once, the words "Clear starred courts?" appear beside it in red, at the same
+   height, so the heading never grows; pressed again, it clears. */
+.bin-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  border: 0; background: none; color: var(--muted); padding: 0; margin: 0; cursor: pointer; line-height: 1;
+  font: inherit; font-size: var(--fs-micro); font-weight: 600; letter-spacing: inherit; text-transform: inherit;
+}
+.bin-btn .ms { width: 15px; height: 15px; flex-shrink: 0; }
+.bin-btn:hover, .bin-btn:focus-visible, .bin-btn.armed { color: var(--danger-ink); }
+.bin-btn .bin-confirm { display: none; white-space: nowrap; }
+.bin-btn.armed .bin-confirm { display: inline; }
+.search-group-label--bin, .browse-header--bin { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.browse-header-mid { flex: 1; text-align: center; color: var(--muted); font-weight: 600; }
+.browse-header-mid.no-room { visibility: hidden; }
+
+.browse-header--bin > span:not(.head-actions), .search-group-label--bin > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.browse-header--bin .head-actions, .search-group-label--bin .head-actions, .search-group-label--bin .bin-btn { margin-left: auto; flex-shrink: 0; }
+/* Share and the bin, at a heading's right. As in BundleTool, picture a circle round each, as wide as its tap area
+   (31px on a touch screen, below): the circles never touch. Centres 33px apart, so 18px between the 15px icons. */
+.head-actions { display: inline-flex; align-items: center; gap: 18px; }
+.head-share-btn {
+  display: inline-flex; align-items: center; border: 0; background: none; color: var(--muted);
+  padding: 0; margin: 0; cursor: pointer; line-height: 1;
+}
+.head-share-btn .ms { width: 15px; height: 15px; }
+.head-share-btn:hover, .head-share-btn:focus-visible { color: var(--orange); }
+.saved-when { font-weight: 400; display: flex; align-items: center; justify-content: center; }   /* centred as a flex box, so the icon and time share the heading's centre line */
+.saved-when > span[aria-hidden] { display: inline-flex; align-items: center; gap: 5px; line-height: 1; }
+.saved-when .ms { width: 14px; height: 14px; flex-shrink: 0; }
+.saved-when strong { font-weight: 600; color: var(--text); }
+   /* keeps its column, so nothing else moves */
+@media (pointer: coarse) {
+  .head-share-btn, .head-actions .bin-btn { position: relative; }
+  .head-share-btn::after, .head-actions .bin-btn::after { content: ""; position: absolute; inset: -8px; }
+}
+
+/* A branch's name and its Starred and Hidden pills: one line, 8px apart. */
+
+/* Called and Emailed on one line, a dot between them; they wrap whole on a narrow screen. */
+.branch-contacted-mark { flex-wrap: wrap; row-gap: 2px; }
+.contacted-part { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.contacted-dot { color: var(--muted); padding: 0 2px; }
+.badge .ms { width: 12px; height: 12px; flex-shrink: 0; }
+/* On a phone there is no room for three equal columns: the heading keeps its width and the count follows it. */
+@media (max-width: 520px) {
+  .browse-header--bin:has(.browse-header-mid) { grid-template-columns: auto 1fr auto; }
+  .browse-header-mid { text-transform: none; letter-spacing: 0; font-size: var(--fs-caption); }
+  /* An armed bin's words need the room on a phone (measured: about 410px against 290 to 340), so the count
+     steps aside and the heading never grows. Wider screens have room for all three and keep the count. */
+  .browse-header--bin:has(.bin-btn.armed) .browse-header-mid { display: none; }
+  /* The same while armed for Share: the bin's words take its place, and it is back once the bin disarms. */
+  .browse-header--bin:has(.bin-btn.armed) .head-share-btn { display: none; }
+}
+
+/* What fills #results is swapped wholesale; the browser must not try to keep a node from the old content in view
+   (Firefox's scroll anchoring could pull the page down into a newly opened list). */
 
 /* Data sources: the attribution the data licences require, shown in the product itself. */
 .data-sources { margin: 28px 0 0; color: var(--muted); font-size: var(--fs-micro); line-height: 1.6; }

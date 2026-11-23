@@ -33,6 +33,32 @@ Contains Royal Mail data (c) Royal Mail copyright and database right 2026.
     "Chambers Finder covers England and Wales only". The attribution above is shown on the
     page itself, under Data sources.
 
+Map outline (Chambers Finder)
+-----------------------------
+
+assets/finder/data/england-wales.json holds the coast of England and Wales and the borders between its
+counties and unitary authorities, drawn by the map on the Chambers Finder page. It is built from the ONS file
+below by a build script that is not part of this repository, with Greater London's boroughs merged into one area and every
+line simplified; nothing about it is fetched when the page is used.
+
+Counties and Unitary Authorities (December 2024) Boundaries UK BGC: Office for National Statistics
+Licensed under the Open Government Licence v3.0.
+Source: Office for National Statistics licensed under the Open Government Licence v.3.0.
+Contains OS data (c) Crown copyright and database right 2024.
+
+    The same attribution is shown on the map itself and on the page, under Data sources.
+
+Inter Tight (the site typeface)
+-------------------------------
+
+Inter Tight 5.3.0 (the Fontsource build of the Inter Tight family): SIL Open Font License 1.1
+    Copyright 2022 The Inter Project Authors (https://github.com/rsms/inter-tight).
+    static/fonts/inter-tight/inter-tight-latin-400-normal.woff2, inter-tight-latin-600-normal.woff2,
+    inter-tight-latin-ext-400-normal.woff2 and inter-tight-latin-ext-600-normal.woff2, shipped unmodified
+    and served from this origin (no font host), with the licence beside them in static/fonts/inter-tight/OFL.txt.
+    Declared in static/css/shared/tokens.css as the one typeface of every page (weights 400 and 600). No
+    Reserved Font Name is declared. A font cannot be sold on its own and must keep this notice; the weights are not renamed.
+
 qrcode-generator@2.0.4
 ---------------------
 

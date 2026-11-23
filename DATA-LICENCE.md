@@ -6,4 +6,6 @@
 
 **The court list** is based in part on the GOV.UK Find a Court or Tribunal service and contains public sector information licensed under the [Open Government Licence v3.0](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/). Keep that attribution where you reuse it.
 
+**The map outline** (the coast and county borders the map draws) is built from the Office for National Statistics "Counties and Unitary Authorities (December 2024) Boundaries UK BGC". Source: Office for National Statistics licensed under the [Open Government Licence v3.0](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/). Contains OS data © Crown copyright and database right 2024. Keep that attribution where you reuse it.
+
 The code in this repository is licensed separately, under the Mozilla Public License 2.0 (`LICENSE`). Postcode data is described in `NOTICE`.

@@ -33,7 +33,7 @@
       }
     }
     var meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.content = mode === 'dark' ? '#0e1014' : '#f0ebe1';
+    if (meta) meta.content = mode === 'dark' ? '#0b0f17' : '#f0ebe3';
   }
 
   function apply(pref) {

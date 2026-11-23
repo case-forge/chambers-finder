@@ -55,7 +55,7 @@ The two data files are enough to answer "which court is nearest this postcode, a
 **`static/finder-data.json`**
 
 - Top level: `schemaVersion`, `updatedOn`, `defaultTravelMiles` (35), `travelRadiusOptions` (20, 35, 50), `focusArea`, and the two lists `courts` and `chambers`.
-- A court has `id`, `name`, `location` (the town), `lat`, `lon` and `aliases`, and sometimes `notes`.
+- A court has `id`, `name`, `location` (the town), `lat`, `lon`, `aliases` and `website` (its page on GOV.UK Find a Court or Tribunal), and sometimes `notes`.
 - A chambers has `id`, `name`, `website`, `email` (the clerks), `phone`, `aliases` and `branches`. A branch has `name`, `city`, `lat`, `lon`, `phone` and `address`. Every chambers has at least one branch; some have several (up to seven).
 - Coordinates are decimal degrees (WGS84). The file holds no starred, hidden or contacted state: those are a person's saved preferences in the page and never appear here.
 
@@ -105,6 +105,7 @@ Version 1.1.0 collects everything changed since the first public snapshot.
 - **Code:** Mozilla Public License 2.0 (`LICENSE`).
 - **Chambers directory data** (the chambers, branches and contact details in `static/finder-data.json`): Creative Commons Attribution 4.0 (CC BY 4.0). Suggested credit: "Chambers directory by CaseForge (caseforge.uk), CC BY 4.0".
 - **Court list:** based in part on the GOV.UK Find a Court or Tribunal service, which contains public sector information licensed under the Open Government Licence v3.0.
+- **Map outline:** Office for National Statistics licensed under the Open Government Licence v3.0. Contains OS data &copy; Crown copyright and database right 2024. The shape is `assets/finder/data/england-wales.json`.
 - **Postcode data:** Office for National Statistics licensed under the Open Government Licence v3.0. Contains OS data &copy; Crown copyright and database right 2026. Contains Royal Mail data &copy; Royal Mail copyright and database right 2026.
 
 `DATA-LICENCE.md` has the data licence in full, `NOTICE` lists every third party component the repository ships, and `THIRD-PARTY-LICENSES/` holds the full text of each component's licence. The attribution is also shown on the page itself, under "Data sources".
