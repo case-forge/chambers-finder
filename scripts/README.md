@@ -66,7 +66,7 @@ Under `--json` a successful single answer looks like this (with one court and on
  "radiusMiles":35,"measureFrom":"court",
  "chosenCourt":{"rank":1,"id":"manchester-family-court","name":"Manchester Family Court","location":"Manchester","lat":53.4808,"lon":-2.2426,"distanceMiles":0.33,"source":"nearest"},
  "courts":[{"rank":1,"id":"manchester-family-court","name":"Manchester Family Court","location":"Manchester","lat":53.4808,"lon":-2.2426,"distanceMiles":0.33}],
- "chambers":[{"rank":1,"id":"3pb-barristers","name":"3PB Barristers","website":"https://3pb.co.uk","email":"family.clerks@3pb.co.uk","phone":"0330 332 0773",
+ "chambers":[{"rank":1,"id":"3pb-barristers","name":"3PB Barristers","website":"https://3pb.co.uk","email":"family@3pb.co.uk","phone":"0330 332 0773",
    "distanceMiles":0,"distanceFromPostcodeMiles":0.33,"withinRadius":true,
    "branch":{"name":"Manchester","city":"Manchester","address":"First Floor, 11 York Street, Manchester M2 2AW","phone":"0161 359 5333","lat":53.4808,"lon":-2.2426}}],
  "chambersWithinRadius":15,"chambersConsidered":59,
